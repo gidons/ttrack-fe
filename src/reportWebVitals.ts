@@ -1,4 +1,6 @@
-const reportWebVitals = onPerfEntry => {
+type PerformanceEntryHandler = (metric: any) => void;
+
+const reportWebVitals = (onPerfEntry?: PerformanceEntryHandler) => {
   if (onPerfEntry && onPerfEntry instanceof Function) {
     import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
       getCLS(onPerfEntry);
