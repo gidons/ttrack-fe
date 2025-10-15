@@ -10,8 +10,6 @@ const SONGS: Song[] = [
     arranger: 'Gidon',
     key: 'Bb',
     durationSec: 103,
-    sheetMusicFile: null,
-    partFiles: {}
   },
   {
     id: '2',
@@ -19,20 +17,13 @@ const SONGS: Song[] = [
     arranger: 'A. Kopser',
     key: 'A',
     durationSec: 180,
-    sheetMusicFile: null,
-    partFiles: {}
   }
 ]
 
 function App(): JSX.Element {
   return (
     <div className="App">
-      <header className="App-header">
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-      </header>
-      <SongList songs={SONGS} />
+      <SongList/>
     </div>
   );
 }
