@@ -1,7 +1,7 @@
 export interface Song {
   id: string;
   title: string;
-  arranger: string;
-  key: string;
-  durationSec: number;
+  arranger?: string;
+  key?: string;
+  durationSec?: number;
 }

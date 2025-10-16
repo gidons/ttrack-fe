@@ -50,7 +50,6 @@ export function SongList({ }: SongListProps) {
 
         try {
             const fetchedSongs = await getAllSongs();
-            console.log("Fetched songs: " + JSON.stringify(fetchedSongs));
             setSongs(fetchedSongs)
         } catch (listDataError) {
             setError(listDataError as Error);
