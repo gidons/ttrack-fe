@@ -3,7 +3,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate, useParams } from 'react-router';
-// import useNotifications from '../hooks/useNotifications/useNotifications';
+import useNotifications from '../hooks/useNotifications/useNotifications';
 
 import SongForm, { type SongFormState, type FormFieldValue } from "./SongForm";
 import { getSong, updateSong, validateSong } from "../data/songs"
@@ -18,6 +18,7 @@ function SongEditForm({
 }) {
     const { songId } = useParams();
     const navigate = useNavigate();
+    const notifications = useNotifications();
     const [formState, setFormState] = React.useState<SongFormState>(() => ({
         values: initialValues,
         errors: {},
@@ -57,25 +58,23 @@ function SongEditForm({
 
         try {
             await onSubmit(formValues);
-            alert('Song edited successfully')
-            // notifications.show('Employee edited successfully.', {
-            //     severity: 'success',
-            //     autoHideDuration: 3000,
-            // });
+            notifications.show('Song edited successfully.', {
+                severity: 'success',
+                autoHideDuration: 3000,
+            });
 
-            navigate('/employees');
+            navigate(`/songs/${songId}`);
         } catch (editError) {
-            alert(`Error submitting song: ${(editError as Error).message}`)
-            // notifications.show(
-            //     `Failed to edit employee. Reason: ${(editError as Error).message}`,
-            //     {
-            //         severity: 'error',
-            //         autoHideDuration: 3000,
-            //     },
-            // );
+            notifications.show(
+                `Failed to edit song. Reason: ${(editError as Error).message}`,
+                {
+                    severity: 'error',
+                    autoHideDuration: 3000,
+                },
+            );
             throw editError;
         }
-    }, [formValues, navigate, /*notifications, */ onSubmit, setFormErrors]);
+    }, [formValues, navigate, notifications, onSubmit, setFormErrors, songId]);
 
     return (
         <SongForm
@@ -84,7 +83,7 @@ function SongEditForm({
             onSubmit={handleFormSubmit}
             onReset={handleFormReset}
             submitButtonLabel="Save"
-            backButtonPath={`/songs`}
+            backButtonPath={`/songs/${songId}`}
         />
     );
 }

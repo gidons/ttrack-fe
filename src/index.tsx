@@ -6,17 +6,23 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Routes, Route } from "react-router";
 import CreateSong from './components/CreateSong';
 import EditSong from './components/EditSong';
+import NotificationsProvider from './hooks/useNotifications/NotificationsProvider';
+import ViewSong from './components/ViewSong';
+import DialogsProvider from './hooks/useDialogs/DialogsProvider';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/songs" element={<App/>}/>
-        <Route path="/songs/new" element={<CreateSong/>}/>
-        <Route path="/songs/:songId" element={<EditSong/>}/>
-      </Routes>
-    </BrowserRouter>
+    <DialogsProvider><NotificationsProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/songs" element={<App/>}/>
+          <Route path="/songs/new" element={<CreateSong/>}/>
+          <Route path="/songs/:songId" element={<ViewSong/>}/>
+          <Route path="/songs/:songId/edit" element={<EditSong/>}/>
+        </Routes>
+      </BrowserRouter>
+    </NotificationsProvider></DialogsProvider>
   </React.StrictMode>
 );
 

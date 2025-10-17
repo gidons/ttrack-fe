@@ -3,9 +3,7 @@ import { Song } from '../types';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import FormGroup from '@mui/material/FormGroup';
 import FormHelperText from '@mui/material/FormHelperText';
 import Grid from '@mui/material/Grid';
@@ -21,7 +19,6 @@ export interface SongFormState {
     values: Partial<Omit<Song, 'id'>>;
     errors: Partial<Record<keyof SongFormState['values'], string>>;
 }
-
 
 /*
  * TODO genericize this whole pattern so it can be used in other forms:
@@ -116,6 +113,22 @@ export default function SongForm(props: SongFormProps) {
         navigate(backButtonPath ?? '/employees');
     }, [navigate, backButtonPath]);
 
+    function makeTextField(property: string, name: string, label: string) {
+        return (
+            <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+                <TextField
+                    value={formValues[property] ?? ''}
+                    onChange={handleTextFieldChange}
+                    name={name}
+                    label={label}
+                    error={!!formErrors[name]}
+                    helperText={formErrors[name] ?? ' '}
+                    fullWidth
+                />
+            </Grid>
+        );
+    }
+
   return (
     <Box
       component="form"
@@ -125,20 +138,10 @@ export default function SongForm(props: SongFormProps) {
       onReset={handleReset}
       sx={{ width: '100%' }}
     >
-          <FormGroup>
-              <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
-                  <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                      <TextField
-                          value={formValues.title ?? ''}
-                          onChange={handleTextFieldChange}
-                          name="title"
-                          label="Title"
-                          error={!!formErrors.title}
-                          helperText={formErrors.title ?? ' '}
-                          fullWidth
-                      />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+        <FormGroup>
+            <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
+                {makeTextField('title', 'title', 'Title')}
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
                     <TextField
                         value={formValues.arranger}
                         onChange={handleTextFieldChange}
@@ -148,25 +151,25 @@ export default function SongForm(props: SongFormProps) {
                         helperText={formErrors.arranger ?? ' '}
                         fullWidth
                     />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                      <FormControl error={!!formErrors.key} fullWidth>
-                          <InputLabel id="song-key-label">Key</InputLabel>
-                          <Select
-                              value={formValues.key ?? ''}
-                              onChange={handleSelectFieldChange as SelectProps['onChange']}
-                              labelId="song-key-label"
-                              name="key"
-                              label="Key"
-                              defaultValue=""
-                              fullWidth
-                          >
-                              <MenuItem value="A">A</MenuItem>
-                              <MenuItem value="Bb">Bb</MenuItem>
-                              <MenuItem value="B">B</MenuItem>
-                          </Select>
-                          <FormHelperText>{formErrors.key ?? ' '}</FormHelperText>
-                      </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+                    <FormControl error={!!formErrors.key} fullWidth>
+                        <InputLabel id="song-key-label">Key</InputLabel>
+                        <Select
+                            value={formValues.key ?? ''}
+                            onChange={handleSelectFieldChange as SelectProps['onChange']}
+                            labelId="song-key-label"
+                            name="key"
+                            label="Key"
+                            defaultValue=""
+                            fullWidth
+                        >
+                            <MenuItem value="A">A</MenuItem>
+                            <MenuItem value="Bb">Bb</MenuItem>
+                            <MenuItem value="B">B</MenuItem>
+                        </Select>
+                        <FormHelperText>{formErrors.key ?? ' '}</FormHelperText>
+                    </FormControl>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
                       <TextField
