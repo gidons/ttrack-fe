@@ -5,7 +5,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
-import EditIcon from '@mui/icons-material/Edit';
+import Download from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -30,16 +30,48 @@ export function TrackList({ songId, typeColumns, fetchTracks, idProp }: TrackLis
 
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
-    const [tracks, setTracks] = React.useState<Array<Track>>([])
+    const [tracks, setTracks] = React.useState<Array<Track>>([]);
 
+    const handleDownload = React.useCallback((row) => () => {
+        const link = document.createElement('a');
+        link.href = getDownloadUrl(row.mediaUrl);
+        link.download = "";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, []);
+    
+    const handleRowDelete = React.useCallback((row) => () => {
+        alert(`Deleting track ID ${row.id}`);
+    }, []);
+    
     const columns = React.useMemo<GridColDef[]>(() => (
         ([] as GridColDef[]).concat(
             typeColumns
         ).concat([
-            { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS },
-            { field: 'mediaUrl', headerName: 'Download', renderCell: ({value}) => (<a href={getDownloadUrl(value)} download>Download</a>) }
-        // TODO add actions: edit, delete
-        ])), []);
+            { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS, sortable: false },
+            {
+                field: 'actions',
+                type: 'actions',
+                flex: 1,
+                align: 'right',
+                getActions: ({row}: GridRowParams) => {
+                    return [
+                    <GridActionsCellItem
+                        key="download-item"
+                        icon={<Download />}
+                        label="Edit"
+                        onClick={handleDownload(row)}
+                    />,
+                    <GridActionsCellItem
+                        key="delete-item"
+                        icon={<DeleteIcon />}
+                        label="Delete"
+                        onClick={handleRowDelete(row)}
+                    />,
+                ]},
+            },
+        ])), [handleDownload, handleRowDelete]);
 
     const loadData = React.useCallback(async () => {
         setError(null);

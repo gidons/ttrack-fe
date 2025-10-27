@@ -196,6 +196,7 @@ export default function ViewSong() {
             ]}
         >
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
+            <Divider sx={{ my: 3 }} />
             <Stack
                 marginTop={3}
                 direction="row"

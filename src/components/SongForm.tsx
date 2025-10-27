@@ -155,8 +155,10 @@ export default function SongForm(props: SongFormProps) {
                             fullWidth
                         >
                             <MenuItem value="A">A</MenuItem>
-                            <MenuItem value="Bb">Bb</MenuItem>
+                            <MenuItem value="Bb">B♭</MenuItem>
                             <MenuItem value="B">B</MenuItem>
+                            <MenuItem value="C">C</MenuItem>
+                            <MenuItem value="C#">C♯</MenuItem>
                         </Select>
                         <FormHelperText>{formErrors.key ?? ' '}</FormHelperText>
                     </FormControl>
