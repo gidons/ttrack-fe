@@ -16,9 +16,12 @@ import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
 import { secondsToHMS, type Song } from '../types'
 import {
+    getMixesForSong,
+    getPartsForSong,
     getSong, updateSong, validateSong
 } from '../data/songs';
 import PageContainer from './PageContainer';
+import { TrackList } from './TrackList';
 
 export default function ViewSong() {
     const { songId } = useParams();
@@ -142,7 +145,7 @@ export default function ViewSong() {
                     {makeDisplayField("Title", song.title)}
                     {makeDisplayField("Arranger", song.arranger)}
                     {makeDisplayField("Key", song.key)}
-                    {makeDisplayField("Duration", secondsToHMS(song.durationSec))}
+                    {/* {makeDisplayField("Duration", secondsToHMS(song.durationSec))} */}
                 </Grid>
                 <Divider sx={{ my: 3 }} />
                 <Stack direction="row" spacing={2} justifyContent="space-between">
@@ -193,6 +196,35 @@ export default function ViewSong() {
             ]}
         >
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
+            <Stack
+                marginTop={3}
+                direction="row"
+                spacing={2}
+                sx={{ width: '100%' }}>
+                <Box flexGrow='1'
+                    sx={{ width: '50%' }}>               
+                    <Typography variant="h6">Parts</Typography>
+                    <TrackList
+                        songId={songId}
+                        typeColumns={[
+                            { field: 'part', headerName: 'Part', type: 'string', width: 80 },
+                        ]}
+                        fetchTracks={getPartsForSong}
+                        idProp="part"
+                    />
+                </Box>
+                <Box flexGrow='1'>
+                    <Typography variant="h6">Mixes</Typography>
+                    <TrackList
+                        songId={songId}
+                        typeColumns={[
+                            { field: 'name', headerName: 'Mix', type: 'string', width: 160 },
+                        ]}
+                        fetchTracks={getMixesForSong}
+                        idProp="name"
+                    />
+                </Box>
+            </Stack>
         </PageContainer>
     );
 }

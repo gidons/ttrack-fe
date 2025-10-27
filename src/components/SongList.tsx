@@ -28,6 +28,10 @@ export function SongList({ }: SongListProps) {
     
     const navigate = useNavigate();
 
+    const handleRowClick = React.useCallback(
+        ({row}) => { navigate(`/songs/${row.id}`)
+    }, [navigate]);
+
     const handleRowEdit = React.useCallback((row) => () => {
         navigate(`/songs/${row.id}/edit`);
     }, [navigate]);
@@ -40,7 +44,7 @@ export function SongList({ }: SongListProps) {
         { field: 'title', headerName: 'Title', width: 300 },
         { field: 'arranger', headerName: 'Arranger', width: 150 },
         { field: 'key', headerName: 'Key', width: 80 },
-        { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS },
+        // { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS },
         {
             field: 'actions',
             type: 'actions',
@@ -64,7 +68,7 @@ export function SongList({ }: SongListProps) {
             ]},
         },
 
-    ], [handleRowEdit, handleRowDelete]);
+    ], [handleRowClick, handleRowEdit, handleRowDelete]);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -120,6 +124,8 @@ export function SongList({ }: SongListProps) {
                         rows={songs}
                         columns={columns}
                         getRowId={(row) => row.id}
+                        onRowClick={handleRowClick}
+                        loading={isLoading}
                     />
                 )}
             </Box>

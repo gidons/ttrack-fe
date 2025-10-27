@@ -13,9 +13,8 @@ Songs Page
 
 Song Page
 ---------
-- Add route
 - Replace song ID with title in page title
-- Add all keys to dropdown
+- Add all keys to dropdown (or break down to multiple fields, see below)
 - List tracks (separate parts and mixes)
 - Add upload-part
 - Add upload-all-parts (ZIP? multi-channel WAV?)

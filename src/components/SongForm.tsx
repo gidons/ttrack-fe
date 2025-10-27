@@ -141,17 +141,7 @@ export default function SongForm(props: SongFormProps) {
         <FormGroup>
             <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
                 {makeTextField('title', 'title', 'Title')}
-                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                    <TextField
-                        value={formValues.arranger}
-                        onChange={handleTextFieldChange}
-                        name="arranger"
-                        label="Arranger"
-                        error={!!formErrors.arranger}
-                        helperText={formErrors.arranger ?? ' '}
-                        fullWidth
-                    />
-                </Grid>
+                {makeTextField('arranger', 'arranger', 'Arranger')}
                 <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
                     <FormControl error={!!formErrors.key} fullWidth>
                         <InputLabel id="song-key-label">Key</InputLabel>
@@ -171,7 +161,7 @@ export default function SongForm(props: SongFormProps) {
                         <FormHelperText>{formErrors.key ?? ' '}</FormHelperText>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+                  {/* <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
                       <TextField
                           type="number"
                           value={formValues.durationSec ?? ''}
@@ -182,7 +172,7 @@ export default function SongForm(props: SongFormProps) {
                           helperText={formErrors.durationSec ?? ' '}
                           fullWidth
                       />
-                  </Grid>
+                  </Grid> */}
               </Grid>
           </FormGroup>
           <Stack direction="row" spacing={2} justifyContent="space-between">

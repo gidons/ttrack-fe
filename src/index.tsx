@@ -9,11 +9,12 @@ import EditSong from './components/EditSong';
 import NotificationsProvider from './hooks/useNotifications/NotificationsProvider';
 import ViewSong from './components/ViewSong';
 import DialogsProvider from './hooks/useDialogs/DialogsProvider';
+import AppTheme from './theme/AppTheme';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
-    <DialogsProvider><NotificationsProvider>
+    <DialogsProvider><NotificationsProvider><AppTheme>
       <BrowserRouter>
         <Routes>
           <Route path="/songs" element={<App/>}/>
@@ -22,7 +23,7 @@ root.render(
           <Route path="/songs/:songId/edit" element={<EditSong/>}/>
         </Routes>
       </BrowserRouter>
-    </NotificationsProvider></DialogsProvider>
+    </AppTheme></NotificationsProvider></DialogsProvider>
   </React.StrictMode>
 );
 
