@@ -1,18 +1,15 @@
-import React from 'react';
+import { PlayArrow } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add'
+import Download from '@mui/icons-material/Download';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
-import Download from '@mui/icons-material/Download';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { DataGrid, GridActionsCellItem, GridColDef, GridEventListener, GridRowParams } from '@mui/x-data-grid';
+import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x-data-grid';
+import React from 'react';
+import { getDownloadUrl } from '../data/songs';
+import { secondsToHMS, Track } from '../types';
+import { Button, Stack, styled, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
-import { secondsToHMS, Song, Track } from '../types';
-import { getDownloadUrl } from '../data/songs'
 
 
 /**
@@ -21,16 +18,44 @@ import { getDownloadUrl } from '../data/songs'
 
 interface TrackListProps {
     songId: string;
+    title: string;
     typeColumns: GridColDef[];
     fetchTracks: (songId: string) => Promise<Track[]>;
     idProp: string;
+    onPlay: (track) => void;
+    addButtonPath?: string;
 }
 
-export function TrackList({ songId, typeColumns, fetchTracks, idProp }: TrackListProps) {
+const TableHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  gap: theme.spacing(2),
+}));
+
+const TableToolbar = styled('div')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'row',
+  gap: theme.spacing(1),
+  // Ensure the toolbar is always on the right side, even after wrapping
+  marginLeft: 'auto',
+}));
+
+export function TrackList({ 
+    songId,
+    title,
+    typeColumns, 
+    fetchTracks, 
+    idProp,
+    // TODO pass a player control? 
+    onPlay,
+    addButtonPath
+}: TrackListProps) {
 
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [tracks, setTracks] = React.useState<Array<Track>>([]);
+    const navigate = useNavigate();
 
     const handleDownload = React.useCallback((row) => () => {
         const link = document.createElement('a');
@@ -43,6 +68,10 @@ export function TrackList({ songId, typeColumns, fetchTracks, idProp }: TrackLis
     
     const handleRowDelete = React.useCallback((row) => () => {
         alert(`Deleting track ID ${row.id}`);
+    }, []);
+    
+    const handleRowPlay = React.useCallback((row) => () => {
+        onPlay(row);
     }, []);
     
     const columns = React.useMemo<GridColDef[]>(() => (
@@ -59,8 +88,14 @@ export function TrackList({ songId, typeColumns, fetchTracks, idProp }: TrackLis
                     return [
                     <GridActionsCellItem
                         key="download-item"
+                        icon={<PlayArrow />}
+                        label="Play"
+                        onClick={handleRowPlay(row)}
+                    />,
+                    <GridActionsCellItem
+                        key="download-item"
                         icon={<Download />}
-                        label="Edit"
+                        label="Download"
                         onClick={handleDownload(row)}
                     />,
                     <GridActionsCellItem
@@ -95,18 +130,32 @@ export function TrackList({ songId, typeColumns, fetchTracks, idProp }: TrackLis
     React.useEffect(() => { loadData() }, [loadData])
 
     return (
-        <Box sx={{ flex: 1, width: '100%' }}>
-            {error ? (
-                <Box sx={{ flexGrow: 1 }}>
-                    <Alert severity="error">{error.message}</Alert>
-                </Box>
-            ) : (
-                <DataGrid
-                    rows={tracks}
-                    columns={columns}
-                    getRowId={(row) => row[idProp]}
-                />
-            )}
-        </Box>
+        <Stack direction="column">
+            <TableHeader>
+                <Typography variant="h6">{title}</Typography>
+                { addButtonPath ? (
+                    <TableToolbar>
+                        <Button 
+                            startIcon={<AddIcon/>}
+                            onClick={() => { navigate(addButtonPath) }}
+                        >Add</Button>
+                    </TableToolbar>
+                ) : (<div/>) 
+                }
+            </TableHeader>
+            <Box sx={{ flex: 1, width: '100%' }}>
+                {error ? (
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Alert severity="error">{error.message}</Alert>
+                    </Box>
+                ) : (
+                    <DataGrid
+                        rows={tracks}
+                        columns={columns}
+                        getRowId={(row) => row[idProp]}
+                    />
+                )}
+            </Box>
+        </Stack>
     );
 }

@@ -110,7 +110,7 @@ export default function SongForm(props: SongFormProps) {
     }, [formValues, onReset]);
 
     const handleBack = React.useCallback(() => {
-        navigate(backButtonPath ?? '/employees');
+        navigate(backButtonPath ?? '/songs');
     }, [navigate, backButtonPath]);
 
     function makeTextField(property: string, name: string, label: string) {

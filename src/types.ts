@@ -21,15 +21,22 @@ export interface TrackInfo {
   readonly durationSec: number;
   readonly created: Date;
   readonly updated: Date;
-  readonly url: URL;
-  readonly mediaUrl: URL;
+  readonly url: string;
+  readonly mediaUrl: string;
 }
+
+export function trackName(t: Track): string {
+  return isMixTrack(t) ? t.name : t.part;
+}
+
+export function isMixTrack(t: Track): t is MixTrack { return 'mix' in t; }
 
 export interface PartTrack extends TrackInfo {
   readonly part: string;
 }
 
 export interface MixTrack extends TrackInfo {
+  readonly name: string;
   readonly mix: AudioMix;
   readonly parts: string[];
 }

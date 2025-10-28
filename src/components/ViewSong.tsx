@@ -14,8 +14,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { secondsToHMS, type Song } from '../types'
+import { trackName, type Song, type Track } from '../types'
 import {
+    getDownloadUrl,
     getMixesForSong,
     getPartsForSong,
     getSong, updateSong, validateSong
@@ -33,6 +34,7 @@ export default function ViewSong() {
     const [song, setSong] = React.useState<Song | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
+    const [playingTrack, setPlayingTrack] = React.useState<Track>(null);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -99,6 +101,11 @@ export default function ViewSong() {
     const handleBack = React.useCallback(() => {
         navigate('/songs');
     }, [navigate]);
+
+    const handlePlay = React.useCallback((track: Track) => {
+        console.log("Setting playing track to: " + JSON.stringify(track));
+        setPlayingTrack(track);
+    }, [setPlayingTrack]);
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -185,14 +192,12 @@ export default function ViewSong() {
         handleSongDelete,
     ]);
 
-    const pageTitle = `Song ${songId}`;
-
     return (
         <PageContainer
-            title={pageTitle}
+            title={isLoading ? "Loading..." : `${song.title}`}
             breadcrumbs={[
                 { title: 'Songs', path: '/songs' },
-                { title: pageTitle },
+                { title: isLoading ? "Loading..." : `${song.title}` },
             ]}
         >
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
@@ -204,27 +209,37 @@ export default function ViewSong() {
                 sx={{ width: '100%' }}>
                 <Box flexGrow='1'
                     sx={{ width: '50%' }}>               
-                    <Typography variant="h6">Parts</Typography>
                     <TrackList
                         songId={songId}
+                        title="Parts"
                         typeColumns={[
                             { field: 'part', headerName: 'Part', type: 'string', width: 80 },
                         ]}
                         fetchTracks={getPartsForSong}
                         idProp="part"
+                        onPlay={handlePlay}
                     />
                 </Box>
                 <Box flexGrow='1'>
-                    <Typography variant="h6">Mixes</Typography>
                     <TrackList
                         songId={songId}
+                        title="Mixes"
                         typeColumns={[
                             { field: 'name', headerName: 'Mix', type: 'string', width: 160 },
                         ]}
                         fetchTracks={getMixesForSong}
                         idProp="name"
+                        onPlay={handlePlay}
+                        addButtonPath={`/songs/${songId}/mixes/new`}
                     />
                 </Box>
+            </Stack>
+            <Stack 
+                sx={{ width: '100%', justifyContent: "center", alignItems: 'center'}}
+                spacing={2}
+                >
+                <Typography variant="h6">Now playing: {playingTrack ? trackName(playingTrack) : "N/A"}</Typography>
+                <audio style={{ width: "500px" }} controls autoPlay src={playingTrack ? getDownloadUrl(playingTrack.mediaUrl) : null}/>
             </Stack>
         </PageContainer>
     );
