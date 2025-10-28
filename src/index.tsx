@@ -22,6 +22,8 @@ root.render(
           <Route path="/songs/new" element={<CreateSong/>}/>
           <Route path="/songs/:songId" element={<ViewSong/>}/>
           <Route path="/songs/:songId/edit" element={<EditSong/>}/>
+          <Route path="/songs/:songId/part/:part" element={<ViewSong/>}/>
+          <Route path="/songs/:songId/mix/:mixName" element={<ViewSong/>}/>
         </Routes>
       </BrowserRouter>
     </AppTheme></NotificationsProvider></DialogsProvider>

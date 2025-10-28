@@ -14,7 +14,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { trackName, type Song, type Track } from '../types'
+import { isMixTrack, stereoMix, StereoMix, trackName, type Song, type Track } from '../types'
 import {
     getDownloadUrl,
     getMixesForSong,
@@ -23,9 +23,11 @@ import {
 } from '../data/songs';
 import PageContainer from './PageContainer';
 import { TrackList } from './TrackList';
+import StereoMixView from './StereoMixView';
 
 export default function ViewSong() {
-    const { songId } = useParams();
+    const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
+    console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
     const navigate = useNavigate();
 
     const dialogs = useDialogs();
@@ -34,7 +36,7 @@ export default function ViewSong() {
     const [song, setSong] = React.useState<Song | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
-    const [playingTrack, setPlayingTrack] = React.useState<Track>(null);
+    const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -102,10 +104,49 @@ export default function ViewSong() {
         navigate('/songs');
     }, [navigate]);
 
-    const handlePlay = React.useCallback((track: Track) => {
-        console.log("Setting playing track to: " + JSON.stringify(track));
-        setPlayingTrack(track);
-    }, [setPlayingTrack]);
+    const handleFoundSelected = React.useCallback((track: Track) => {
+        console.log("Setting selected track to: " + JSON.stringify(track));
+        setSelectedTrack(track);
+    }, [setSelectedTrack]);
+
+    const handleAddMix = React.useCallback(async () => {
+        if (!song) {
+            return;
+        }
+
+        const confirmed = await dialogs.open(
+            `Please select a mix to create for ${song.title}:`,
+            {
+                title: `Create Mix`,
+                okText: 'Create',
+                cancelText: 'Cancel',
+            },
+        );
+
+        if (confirmed) {
+            setIsLoading(true);
+            try {
+                alert("TODO: Delete song");
+                // await deleteSong(Number(songId));
+
+                navigate('/songs');
+
+                notifications.show('Song deleted successfully.', {
+                    severity: 'success',
+                    autoHideDuration: 3000,
+                });
+            } catch (deleteError) {
+                notifications.show(
+                    `Failed to delete song. Reason:' ${(deleteError as Error).message}`,
+                    {
+                        severity: 'error',
+                        autoHideDuration: 3000,
+                    },
+                );
+            }
+            setIsLoading(false);
+        }
+    }, [song, dialogs, songId, navigate, notifications]);
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -192,6 +233,8 @@ export default function ViewSong() {
         handleSongDelete,
     ]);
 
+    const mixWithParts = stereoMix(selectedTrack);
+
     return (
         <PageContainer
             title={isLoading ? "Loading..." : `${song.title}`}
@@ -217,7 +260,9 @@ export default function ViewSong() {
                         ]}
                         fetchTracks={getPartsForSong}
                         idProp="part"
-                        onPlay={handlePlay}
+                        selected={selectedPart}
+                        onFoundSelected={handleFoundSelected}
+                        playButtonPath={`/songs/${songId}/part/{id}`}
                     />
                 </Box>
                 <Box flexGrow='1'>
@@ -229,18 +274,24 @@ export default function ViewSong() {
                         ]}
                         fetchTracks={getMixesForSong}
                         idProp="name"
-                        onPlay={handlePlay}
-                        addButtonPath={`/songs/${songId}/mixes/new`}
+                        selected={selectedMixName}
+                        onFoundSelected={handleFoundSelected}
+                        playButtonPath={`/songs/${songId}/mix/{id}`}
                     />
                 </Box>
             </Stack>
+            { selectedTrack ? (
             <Stack 
                 sx={{ width: '100%', justifyContent: "center", alignItems: 'center'}}
                 spacing={2}
+                padding={2}
                 >
-                <Typography variant="h6">Now playing: {playingTrack ? trackName(playingTrack) : "N/A"}</Typography>
-                <audio style={{ width: "500px" }} controls autoPlay src={playingTrack ? getDownloadUrl(playingTrack.mediaUrl) : null}/>
+                <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
+                <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)}/>
+                <StereoMixView mix={mixWithParts} parts={mixWithParts.parts}/>
             </Stack>
+            ) : (<div/>)
+            }
         </PageContainer>
     );
 }

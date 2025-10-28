@@ -22,8 +22,12 @@ interface TrackListProps {
     typeColumns: GridColDef[];
     fetchTracks: (songId: string) => Promise<Track[]>;
     idProp: string;
-    onPlay: (track) => void;
-    addButtonPath?: string;
+    /** The selected track ID, if any */ 
+    selected?: string;
+    onFoundSelected: (track) => void;
+    playButtonPath: string;
+    // Add action: either a callback or a path to go to
+    onAdd?: (() => void) | string;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -47,9 +51,10 @@ export function TrackList({
     typeColumns, 
     fetchTracks, 
     idProp,
-    // TODO pass a player control? 
-    onPlay,
-    addButtonPath
+    selected,
+    onFoundSelected,
+    playButtonPath,
+    onAdd,
 }: TrackListProps) {
 
     const [isLoading, setIsLoading] = React.useState(true);
@@ -71,7 +76,7 @@ export function TrackList({
     }, []);
     
     const handleRowPlay = React.useCallback((row) => () => {
-        onPlay(row);
+        navigate(playButtonPath.replace('{id}', row[idProp]));
     }, []);
     
     const columns = React.useMemo<GridColDef[]>(() => (
@@ -115,6 +120,7 @@ export function TrackList({
         try {
             const fetchedTracks = await fetchTracks(songId);
             setTracks(fetchedTracks)
+            findSelectedTrack();
         } catch (listDataError) {
             setError(listDataError as Error);
         }
@@ -125,19 +131,31 @@ export function TrackList({
     const handleRefresh = React.useCallback(() => { 
         if (!isLoading) { loadData() } 
     }, [isLoading, loadData])
+
+    function findSelectedTrack() {
+        if (!selected || isLoading) { return; }
+        console.log(`Searching for track with {idProp} of {selected}`);
+        const selectedTrack = tracks.find((t) => t[idProp] == selected);
+        console.log(`Result: {selectedTrack}`);
+        if (selectedTrack) {
+            onFoundSelected(selectedTrack);
+        }
+    }
+
     function handleCreateClick() { return <Alert severity="info">Creating</Alert> }
 
     React.useEffect(() => { loadData() }, [loadData])
+    React.useEffect(() => { findSelectedTrack() }, [selected, isLoading, tracks]);
 
     return (
         <Stack direction="column">
             <TableHeader>
                 <Typography variant="h6">{title}</Typography>
-                { addButtonPath ? (
+                { onAdd ? (
                     <TableToolbar>
                         <Button 
                             startIcon={<AddIcon/>}
-                            onClick={() => { navigate(addButtonPath) }}
+                            onClick={typeof(onAdd)=="string" ? () => {navigate(onAdd)} : onAdd }
                         >Add</Button>
                     </TableToolbar>
                 ) : (<div/>) 

@@ -29,7 +29,23 @@ export function trackName(t: Track): string {
   return isMixTrack(t) ? t.name : t.part;
 }
 
-export function isMixTrack(t: Track): t is MixTrack { return 'mix' in t; }
+export function stereoMix(t: Track): StereoMix & { parts: string[] } {
+  if (isMixTrack(t)) {
+    return { ...(t.mix as StereoMix), parts: t.parts }; // TODO unsafe
+  }
+  if (isPartTrack(t)) {
+    return {
+      name: t.part,
+      parts: [t.part],
+      leftFactors: [1.0],
+      rightFactors: [1.0]
+    }
+  }
+  return { name: "", parts: [], leftFactors: [], rightFactors: [] };
+}
+
+export function isMixTrack(t: Track): t is MixTrack { return t != null && t['mix']; }
+export function isPartTrack(t: Track): t is PartTrack { return t != null && t['part']; }
 
 export interface PartTrack extends TrackInfo {
   readonly part: string;
