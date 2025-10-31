@@ -14,7 +14,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { isMixTrack, stereoMix, StereoMix, trackName, type Song, type Track } from '../types'
+import { isMixTrack, MixTrack, stereoMix, StereoMix, trackName, type Song, type Track } from '../types'
 import {
     getDownloadUrl,
     getMixesForSong,
@@ -24,6 +24,7 @@ import {
 import PageContainer from './PageContainer';
 import { TrackList } from './TrackList';
 import StereoMixView from './StereoMixView';
+import CreateMixDialog from './CreateMixDialog';
 
 export default function ViewSong() {
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
@@ -37,6 +38,7 @@ export default function ViewSong() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
+    const [addMixDialogOpen, setAddMixDialogOpen] = React.useState(false);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -113,40 +115,11 @@ export default function ViewSong() {
         if (!song) {
             return;
         }
-
-        const confirmed = await dialogs.open(
-            `Please select a mix to create for ${song.title}:`,
-            {
-                title: `Create Mix`,
-                okText: 'Create',
-                cancelText: 'Cancel',
-            },
-        );
-
-        if (confirmed) {
-            setIsLoading(true);
-            try {
-                alert("TODO: Delete song");
-                // await deleteSong(Number(songId));
-
-                navigate('/songs');
-
-                notifications.show('Song deleted successfully.', {
-                    severity: 'success',
-                    autoHideDuration: 3000,
-                });
-            } catch (deleteError) {
-                notifications.show(
-                    `Failed to delete song. Reason:' ${(deleteError as Error).message}`,
-                    {
-                        severity: 'error',
-                        autoHideDuration: 3000,
-                    },
-                );
-            }
-            setIsLoading(false);
-        }
-    }, [song, dialogs, songId, navigate, notifications]);
+        setAddMixDialogOpen(true);
+    }, [song]);
+    const handleAddMixClose = (newTrack: MixTrack) => {
+        setAddMixDialogOpen(false);
+    }
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -233,7 +206,43 @@ export default function ViewSong() {
         handleSongDelete,
     ]);
 
-    const mixWithParts = stereoMix(selectedTrack);
+    const mix = stereoMix(selectedTrack);
+
+    const mixTracksList = <TrackList
+        songId={songId}
+        title="Parts"
+        typeColumns={[
+            { field: 'part', headerName: 'Part', type: 'string', width: 80 },
+        ]}
+        fetchTracks={getPartsForSong}
+        idProp="part"
+        selected={selectedPart}
+        onFoundSelected={handleFoundSelected}
+        playButtonPath={`/songs/${songId}/part/{id}`} />;
+    const partTrackList = <TrackList
+        songId={songId}
+        title="Mixes"
+        typeColumns={[
+            { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
+        ]}
+        fetchTracks={getMixesForSong}
+        idProp="name"
+        selected={selectedMixName}
+        onFoundSelected={handleFoundSelected}
+        playButtonPath={`/songs/${songId}/mix/{id}`}
+        onAdd={handleAddMix} />;
+        
+    const playerView = selectedTrack ? (
+        <Stack
+            sx={{ width: '100%', justifyContent: "center", alignItems: 'center' }}
+            spacing={2}
+            padding={2}
+        >
+            <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
+            <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)} />
+            <Box sx={{width:'50%'}}><StereoMixView mix={mix}/></Box>
+        </Stack>
+    ) : (<div />);
 
     return (
         <PageContainer
@@ -243,6 +252,7 @@ export default function ViewSong() {
                 { title: isLoading ? "Loading..." : `${song.title}` },
             ]}
         >
+            <CreateMixDialog open={addMixDialogOpen} onClose={handleAddMixClose} song={song}/>
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
             <Divider sx={{ my: 3 }} />
             <Stack
@@ -252,46 +262,13 @@ export default function ViewSong() {
                 sx={{ width: '100%' }}>
                 <Box flexGrow='1'
                     sx={{ width: '50%' }}>               
-                    <TrackList
-                        songId={songId}
-                        title="Parts"
-                        typeColumns={[
-                            { field: 'part', headerName: 'Part', type: 'string', width: 80 },
-                        ]}
-                        fetchTracks={getPartsForSong}
-                        idProp="part"
-                        selected={selectedPart}
-                        onFoundSelected={handleFoundSelected}
-                        playButtonPath={`/songs/${songId}/part/{id}`}
-                    />
+                    {mixTracksList}
                 </Box>
                 <Box flexGrow='1'>
-                    <TrackList
-                        songId={songId}
-                        title="Mixes"
-                        typeColumns={[
-                            { field: 'name', headerName: 'Mix', type: 'string', width: 160 },
-                        ]}
-                        fetchTracks={getMixesForSong}
-                        idProp="name"
-                        selected={selectedMixName}
-                        onFoundSelected={handleFoundSelected}
-                        playButtonPath={`/songs/${songId}/mix/{id}`}
-                    />
+                    {partTrackList}
                 </Box>
             </Stack>
-            { selectedTrack ? (
-            <Stack 
-                sx={{ width: '100%', justifyContent: "center", alignItems: 'center'}}
-                spacing={2}
-                padding={2}
-                >
-                <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
-                <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)}/>
-                <StereoMixView mix={mixWithParts} parts={mixWithParts.parts}/>
-            </Stack>
-            ) : (<div/>)
-            }
+            { playerView }
         </PageContainer>
     );
 }

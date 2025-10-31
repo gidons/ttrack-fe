@@ -1,6 +1,7 @@
 import { PlayArrow } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add'
+import RefreshIcon from '@mui/icons-material/Refresh';
 import Download from '@mui/icons-material/Download';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -8,7 +9,7 @@ import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x
 import React from 'react';
 import { getDownloadUrl } from '../data/songs';
 import { secondsToHMS, Track } from '../types';
-import { Button, Stack, styled, Typography } from '@mui/material';
+import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 
 
@@ -50,7 +51,6 @@ export function TrackList({
     title,
     typeColumns, 
     fetchTracks, 
-    idProp,
     selected,
     onFoundSelected,
     playButtonPath,
@@ -62,7 +62,12 @@ export function TrackList({
     const [tracks, setTracks] = React.useState<Array<Track>>([]);
     const navigate = useNavigate();
 
+    const idProp = 'trackId';
+
     const handleDownload = React.useCallback((row) => () => {
+        if (!row.mediaUrl) {
+            return;
+        }
         const link = document.createElement('a');
         link.href = getDownloadUrl(row.mediaUrl);
         link.download = "";
@@ -83,16 +88,18 @@ export function TrackList({
         ([] as GridColDef[]).concat(
             typeColumns
         ).concat([
-            { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS, sortable: false },
+            { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS,
+                 sortable: false, disableColumnMenu: true },
             {
                 field: 'actions',
                 type: 'actions',
                 flex: 1,
                 align: 'right',
+                disableColumnMenu: true,
                 getActions: ({row}: GridRowParams) => {
                     return [
                     <GridActionsCellItem
-                        key="download-item"
+                        key="play-item"
                         icon={<PlayArrow />}
                         label="Play"
                         onClick={handleRowPlay(row)}
@@ -101,6 +108,7 @@ export function TrackList({
                         key="download-item"
                         icon={<Download />}
                         label="Download"
+                        disabled={!row.mediaUrl}
                         onClick={handleDownload(row)}
                     />,
                     <GridActionsCellItem
@@ -134,9 +142,8 @@ export function TrackList({
 
     function findSelectedTrack() {
         if (!selected || isLoading) { return; }
-        console.log(`Searching for track with {idProp} of {selected}`);
-        const selectedTrack = tracks.find((t) => t[idProp] == selected);
-        console.log(`Result: {selectedTrack}`);
+        console.log(`Searching for track with trackId of '${selected}'`);
+        const selectedTrack = tracks.find((t) => t.trackId == selected);
         if (selectedTrack) {
             onFoundSelected(selectedTrack);
         }
@@ -151,15 +158,22 @@ export function TrackList({
         <Stack direction="column">
             <TableHeader>
                 <Typography variant="h6">{title}</Typography>
+                <TableToolbar>
+                    <Tooltip title="Reload data" placement="right" enterDelay={1000}>
+                        <div>
+                            <IconButton size="small" aria-label="refresh" onClick={handleRefresh}>
+                                <RefreshIcon />
+                            </IconButton>
+                        </div>
+                    </Tooltip>
                 { onAdd ? (
-                    <TableToolbar>
                         <Button 
                             startIcon={<AddIcon/>}
                             onClick={typeof(onAdd)=="string" ? () => {navigate(onAdd)} : onAdd }
                         >Add</Button>
-                    </TableToolbar>
-                ) : (<div/>) 
+                    ) : (<div/>) 
                 }
+                </TableToolbar>
             </TableHeader>
             <Box sx={{ flex: 1, width: '100%' }}>
                 {error ? (

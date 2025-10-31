@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Slider from '@mui/material/Slider';
@@ -9,12 +9,12 @@ import { StereoMix } from '../types';
 
 export interface StereoMixViewProps {
     mix: StereoMix;
-    parts: string[]; // labels for each slider (part names)
+    isEditable?: boolean;
 }
 
-export default function StereoMixView({ mix, parts }: StereoMixViewProps) {
-    const left = mix.leftFactors ?? [];
-    const right = mix.rightFactors ?? [];
+export default function StereoMixView({ mix: { spec, parts }, isEditable = false }: StereoMixViewProps) {
+    const [left, setLeft] = React.useState(spec.leftFactors ?? []);
+    const [right, setRight] = React.useState(spec.rightFactors ?? []);
 
     const count = Math.max(left.length, right.length, parts.length);
 
@@ -23,8 +23,45 @@ export default function StereoMixView({ mix, parts }: StereoMixViewProps) {
 
     const rowHeight=40;
 
+    const updateFactors = (factors: number[], index: number, newValue: number): number[] => {
+        let newFactors = [...factors];
+        const oldValue = factors[index];
+        const oldOtherTotal = 1.0 - oldValue;
+        const newOtherTotal = 1.0 - newValue;
+        if (oldOtherTotal == 0.0) {
+            for (let i = 0; i < factors.length; i++) {
+                if (i == index) {
+                    newFactors[i] = newValue;
+                } else {
+                    newFactors[i] = newOtherTotal / (factors.length - 1);
+                }
+            }
+        } else {
+            const coeff = newOtherTotal / oldOtherTotal;
+            for (let i = 0; i < factors.length; i++) {
+                if (i == index) {
+                   newFactors[i] = newValue;
+                } else {
+                    newFactors[i] = factors[i] * coeff;
+                }
+            }
+        }
+        return newFactors;   
+    }
+
+    const handleFactorSliderChange = React.useCallback((isLeft: boolean, partIndex: number, value: number) => {
+        console.log(`handleFactorSliderChange(${isLeft}, ${partIndex}, ${value})`);
+        if (isLeft) {
+            setLeft(f => updateFactors(f, partIndex, value));
+        } else {
+            setRight(f => updateFactors(f, partIndex, value));
+        }
+    }, [setLeft, setRight]);
+
+    console.log(`left: ${left}; right: ${right}`);
+
     return (
-        <Box sx={{ width: '50%' }}>
+        <Box sx={{ width: '100%' }}>
             <Stack spacing={2}>
                 <Grid container size={12}>
                     <Grid size={2}>
@@ -50,9 +87,10 @@ export default function StereoMixView({ mix, parts }: StereoMixViewProps) {
                                         min={0}
                                         max={1}
                                         step={0.01}
-                                        disabled
+                                        disabled={!isEditable}
                                         aria-label={`left-factor-${i}`}
-                                    />
+                                        onChange={(e,v) => handleFactorSliderChange(true, i, v)}
+                                        />
                                 </Grid>
                                 <Grid size={4}>
                                     <TextField
@@ -73,8 +111,9 @@ export default function StereoMixView({ mix, parts }: StereoMixViewProps) {
                                         min={0}
                                         max={1}
                                         step={0.01}
-                                        disabled
+                                        disabled={!isEditable}
                                         aria-label={`right-factor-${i}`}
+                                        onChange={(e,v) => handleFactorSliderChange(false, i, v)}
                                     />
                                 </Grid>
                                 <Grid size={4}>
