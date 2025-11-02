@@ -51,12 +51,9 @@ export interface OpenFormDialog<R> {
 }
 
 export function FormDialog<R>({ open, payload, onClose }: FormDialogProps<R>) {
-    console.log(`Rendering FormDialog: onClose=${onClose}`);
+    // console.log(`Rendering FormDialog: onClose=${onClose}`);
     const cancelButtonProps = useDialogLoadingButton(() => {
-        console.log("cancel pressed")
-        const p = onClose(null);
-        console.log("cancel: return from onClose: " + p)
-        return p;
+        return onClose(null);
     });
 
     const [loading, setLoading] = React.useState(true);
@@ -76,7 +73,7 @@ export function FormDialog<R>({ open, payload, onClose }: FormDialogProps<R>) {
 
     const isValid = React.useCallback(() => {
         const valid = payload.validate ? !(payload.validate().length) : true;
-        console.log(`isValid: ${valid}`);
+        // console.log(`isValid: ${valid}`);
         return valid;
     }, [payload.validate])
 

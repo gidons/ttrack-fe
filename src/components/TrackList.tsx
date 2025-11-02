@@ -28,7 +28,7 @@ interface TrackListProps {
     onFoundSelected: (track) => void;
     playButtonPath: string;
     // Add action: either a callback or a path to go to
-    onAdd?: (() => void) | string;
+    onAdd?: () => Promise<Track>;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -140,6 +140,13 @@ export function TrackList({
         if (!isLoading) { loadData() } 
     }, [isLoading, loadData])
 
+    const handleAdd = React.useCallback(async () => {
+        const created = await onAdd();
+        if (created) {
+            loadData();
+        }
+    }, [onAdd, loadData])
+
     function findSelectedTrack() {
         if (!selected || isLoading) { return; }
         console.log(`Searching for track with trackId of '${selected}'`);
@@ -169,7 +176,7 @@ export function TrackList({
                 { onAdd ? (
                         <Button 
                             startIcon={<AddIcon/>}
-                            onClick={typeof(onAdd)=="string" ? () => {navigate(onAdd)} : onAdd }
+                            onClick={handleAdd}
                         >Add</Button>
                     ) : (<div/>) 
                 }

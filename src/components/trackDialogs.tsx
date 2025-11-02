@@ -38,10 +38,10 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
         }
     }, [song]);
 
-    const handleClose = React.useCallback(async () => {
-        console.log(`handleClose`);
-        return onClose(isValidMixTrack(createdTrack) ? createdTrack : null);
-    }, [onClose, createdTrack]);
+    const handleClose = React.useCallback(async (t) => {
+        console.log(`handleClose: ` + JSON.stringify(t));
+        return onClose(isValidMixTrack(t) ? t : null);
+    }, [onClose]);
 
     const handleSelectedMixChange = React.useCallback(
         (e: SelectChangeEvent<HTMLSelectElement>) => {
@@ -71,13 +71,15 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
 
     const handleTrackNameChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setTrackName(e.target.value);
-    }, [setCreatedTrack]);
+    }, [setTrackName]);
 
     const onSubmit = React.useCallback(() => {
             const mix: StereoMix = { ...currentMix, name: trackName }
             console.log("Creating track with mix: " + JSON.stringify(mix));
             try {
-                return createMixTrack(song.id, mix, isCustomMix);
+                const created = createMixTrack(song.id, mix, isCustomMix);
+                console.log("Created track: " + JSON.stringify(created));
+                return created;
             } catch(e) {
                 setError(e as Error);
                 throw e;
@@ -227,10 +229,10 @@ export function UploadPartDialog({ open, payload: { song }, onClose } : UploadPa
         }
     }, [song, partName, audioFile]);
 
-    const handleClose = React.useCallback(async () => {
+    const handleClose = React.useCallback(async (track) => {
         console.log(`handleClose`);
-        return onClose(isValidPartTrack(createdTrack) ? createdTrack : null);
-    }, [onClose, createdTrack]);
+        return onClose(isValidPartTrack(track) ? track : null);
+    }, [onClose]);
 
     const payload: FormDialogPayload<PartTrack> = {
         title: title,
@@ -241,7 +243,7 @@ export function UploadPartDialog({ open, payload: { song }, onClose } : UploadPa
     return <FormDialog
         open={open}
         payload={payload}
-        onClose={() => handleClose()}
+        onClose={(track) => handleClose(track)}
     />
 }
 

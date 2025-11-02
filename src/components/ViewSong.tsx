@@ -1,4 +1,6 @@
-import * as React from 'react';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -8,23 +10,21 @@ import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import * as React from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useDialogs } from '../hooks/useDialogs/useDialogs';
-import useNotifications from '../hooks/useNotifications/useNotifications';
-import { isMixTrack, MixTrack, stereoMix, StereoMix, trackName, type Song, type Track } from '../types'
 import {
     getDownloadUrl,
     getMixesForSong,
     getPartsForSong,
-    getSong, updateSong, validateSong
+    getSong
 } from '../data/songs';
+import { useDialogs } from '../hooks/useDialogs/useDialogs';
+import useNotifications from '../hooks/useNotifications/useNotifications';
+import { MixTrack, PartTrack, stereoMix, trackName, type Song, type Track } from '../types';
 import PageContainer from './PageContainer';
-import { TrackList } from './TrackList';
 import StereoMixView from './StereoMixView';
 import { useTrackDialogs } from './trackDialogs';
+import { TrackList } from './TrackList';
 
 export default function ViewSong() {
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
@@ -112,21 +112,18 @@ export default function ViewSong() {
     }, [setSelectedTrack]);
 
     const handleAddMix = React.useCallback(async () => {
-        if (!song) {
-            return;
-        }
-        console.log("Opening mix dialog");
-        const createdTrack = await openCreateMixDialog(song);
+        if (!song) { return null; }
+        const createdTrack: MixTrack = await openCreateMixDialog(song);
         console.log("Created track: " + JSON.stringify(createdTrack));
-        loadData();
-    }, [song, loadData]);
+        return createdTrack;
+    }, [song]);
 
     const handleAddPart = React.useCallback(async () => {
-        if (!song) { return }
-        const createdTrack = await openUploadPartDialog(song);
+        if (!song) { return null; }
+        const createdTrack: PartTrack = await openUploadPartDialog(song);
         console.log("Created track: " + JSON.stringify(createdTrack));
-        loadData();
-    }, [song, loadData]);
+        return createdTrack;
+    }, [song]);
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
