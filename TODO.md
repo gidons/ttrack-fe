@@ -13,27 +13,20 @@ Songs Page
 
 Song Page
 ---------
-- Replace song ID with title in page title
 - Add all keys to dropdown (or break down to multiple fields, see below)
-- List tracks (separate parts and mixes)
-- Add upload-part
-- Add upload-all-parts (ZIP? multi-channel WAV?)
+- Upload-part:
+    - Allow uploading multiple parts from same dialog
+    - Show errors on submit
+    - After close, refresh track list
+- Create-mix:
+    - Allow creating multiple mixes from same dialog
+    - Show errors before on submit
+    - After close, refresh track list
+- Add upload-all-parts (ZIP? multi-channel WAV/MP3?)
 
-Track Page
-----------
-- Track form
-- Download
-- Upload part
-- Delete part
-- Create mix
-- Create mix pacakge
-- Relabel parts?
-- In-page player? 
-
-Mixes Page
-----------
-- List available mixes
-- Create/edit/delete
+Mix Packages
+------------
+?
 
 Appearance
 ==========

@@ -24,7 +24,7 @@ import {
 import PageContainer from './PageContainer';
 import { TrackList } from './TrackList';
 import StereoMixView from './StereoMixView';
-import CreateMixDialog from './CreateMixDialog';
+import { useTrackDialogs } from './trackDialogs';
 
 export default function ViewSong() {
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
@@ -32,13 +32,13 @@ export default function ViewSong() {
     const navigate = useNavigate();
 
     const dialogs = useDialogs();
+    const { openCreateMixDialog, openUploadPartDialog } = useTrackDialogs();
     const notifications = useNotifications();
 
     const [song, setSong] = React.useState<Song | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
-    const [addMixDialogOpen, setAddMixDialogOpen] = React.useState(false);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -115,11 +115,18 @@ export default function ViewSong() {
         if (!song) {
             return;
         }
-        setAddMixDialogOpen(true);
-    }, [song]);
-    const handleAddMixClose = (newTrack: MixTrack) => {
-        setAddMixDialogOpen(false);
-    }
+        console.log("Opening mix dialog");
+        const createdTrack = await openCreateMixDialog(song);
+        console.log("Created track: " + JSON.stringify(createdTrack));
+        loadData();
+    }, [song, loadData]);
+
+    const handleAddPart = React.useCallback(async () => {
+        if (!song) { return }
+        const createdTrack = await openUploadPartDialog(song);
+        console.log("Created track: " + JSON.stringify(createdTrack));
+        loadData();
+    }, [song, loadData]);
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -208,7 +215,7 @@ export default function ViewSong() {
 
     const mix = stereoMix(selectedTrack);
 
-    const mixTracksList = <TrackList
+    const partTracksList = <TrackList
         songId={songId}
         title="Parts"
         typeColumns={[
@@ -218,8 +225,10 @@ export default function ViewSong() {
         idProp="part"
         selected={selectedPart}
         onFoundSelected={handleFoundSelected}
-        playButtonPath={`/songs/${songId}/part/{id}`} />;
-    const partTrackList = <TrackList
+        playButtonPath={`/songs/${songId}/part/{id}`} 
+        onAdd={handleAddPart}/>;
+
+    const mixTracksList = <TrackList
         songId={songId}
         title="Mixes"
         typeColumns={[
@@ -252,7 +261,7 @@ export default function ViewSong() {
                 { title: isLoading ? "Loading..." : `${song.title}` },
             ]}
         >
-            <CreateMixDialog open={addMixDialogOpen} onClose={handleAddMixClose} song={song}/>
+            {/* <CreateMixDialog open={addMixDialogOpen} onClose={handleAddMixClose} song={song}/> */}
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
             <Divider sx={{ my: 3 }} />
             <Stack
@@ -262,10 +271,10 @@ export default function ViewSong() {
                 sx={{ width: '100%' }}>
                 <Box flexGrow='1'
                     sx={{ width: '50%' }}>               
-                    {mixTracksList}
+                    {partTracksList}
                 </Box>
                 <Box flexGrow='1'>
-                    {partTrackList}
+                    {mixTracksList}
                 </Box>
             </Stack>
             { playerView }

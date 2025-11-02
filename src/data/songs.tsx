@@ -7,6 +7,7 @@ const client = axios.create({ baseURL: serverUrl })
 
 type StereoMixDTO = Omit<StereoMix, 'spec'> & { mix: StereoMixSpec };
 type MixTrackDTO = Omit<MixTrack, 'mix'> & { mixInfo: StereoMixDTO };
+type PartTrackDTO = TrackInfo;
 
 export async function getAllSongs() : Promise<Song[]> {
     const response = await client.get('/songs');
@@ -33,6 +34,13 @@ export async function updateSong(song: Partial<Song>) : Promise<Song> {
 
 export async function getPartsForSong(songId: string) : Promise<PartTrack[]> {
     const response = await client.get(`/songs/${songId}/parts`);
+    return response.data.map(partTrackDtoToPartTrack);
+}
+
+export async function uploadPartTrack(songId: string, partName: string, audioFile: File, direct: boolean = true) : Promise<PartTrack> {
+    const formData = new FormData();
+    formData.append('audioFile', audioFile);
+    const response = await client.put(`/songs/${songId}/parts/${partName}?direct=${direct}`, formData);
     return response.data;
 }
 
@@ -42,9 +50,13 @@ export async function getMixesForSong(songId: string) : Promise<MixTrack[]> {
     return dtos.map(mixTrackDtoToMixTrack);
 }
 
+function partTrackDtoToPartTrack(dto: PartTrackDTO) {
+    return { ...dto, part: dto.trackId };
+}
+
 function mixDtoToMix(dto: StereoMixDTO): StereoMix {
     const { mix, ...others } = dto;
-    return { ...others, spec: dto.mix }
+    return { ...others, spec: dto.mix };
 }
 
 function mixTrackDtoToMixTrack(dto: MixTrackDTO): MixTrack {

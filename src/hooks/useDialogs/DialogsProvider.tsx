@@ -69,6 +69,7 @@ export default function DialogsProvider(props: DialogProviderProps) {
     const closeDialogUi = useEventCallback(function closeDialogUi<R>(
         dialog: Promise<R>,
     ) {
+        console.log('closeDialogUi');
         setStack((prevStack) =>
             prevStack.map((entry) =>
                 entry.promise === dialog ? { ...entry, open: false } : entry,
@@ -85,6 +86,7 @@ export default function DialogsProvider(props: DialogProviderProps) {
         dialog: Promise<R>,
         result: R,
     ) {
+        console.log('closeDialog');
         const entryToClose = dialogMetadata.current.get(dialog);
         if (!entryToClose) {
             throw new Error('Dialog not found.');
@@ -113,6 +115,7 @@ export default function DialogsProvider(props: DialogProviderProps) {
                     payload={payload}
                     open={open}
                     onClose={async (result) => {
+                        console.log("calling await closeDialog")
                         await closeDialog(promise, result);
                     }}
                 />

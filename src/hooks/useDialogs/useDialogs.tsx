@@ -170,7 +170,7 @@ export interface DialogHook {
     close: CloseDialog;
 }
 
-function useDialogLoadingButton(onClose: () => Promise<void>) {
+export function useDialogLoadingButton(onClose: () => Promise<void>) {
     const [loading, setLoading] = React.useState(false);
     const handleClick = async () => {
         try {
@@ -244,7 +244,10 @@ export interface PromptDialogProps
 
 export function PromptDialog({ open, payload, onClose }: PromptDialogProps) {
     const [input, setInput] = React.useState('');
-    const cancelButtonProps = useDialogLoadingButton(() => onClose(null));
+    const cancelButtonProps = useDialogLoadingButton(() => {
+        console.log("cancel pressed")
+        return onClose(null)
+    });
 
     const [loading, setLoading] = React.useState(false);
 

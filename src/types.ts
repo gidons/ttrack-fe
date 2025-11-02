@@ -46,6 +46,10 @@ export type Track = PartTrack | MixTrack;
 export function isMixTrack(t: Track): t is MixTrack { return t != null && t['mix']; }
 export function isPartTrack(t: Track): t is PartTrack { return t != null && t['part']; }
 
+export function isValidTrack(t: Partial<TrackInfo>): t is Track { return t != null && !!t['songId'] && !!t['trackId']; }
+export function isValidMixTrack(t: Partial<MixTrack>): t is MixTrack { return isValidTrack(t) && isMixTrack(t) }
+export function isValidPartTrack(t: Partial<PartTrack>): t is PartTrack { return isValidTrack(t) && isPartTrack(t) }
+
 export function trackName(t: Track): string {
   return isMixTrack(t) ? t.trackId : t.part;
 }

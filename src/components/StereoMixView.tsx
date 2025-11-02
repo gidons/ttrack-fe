@@ -6,6 +6,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import { StereoMix } from '../types';
+import { Input, OutlinedInput, SlotCommonProps, SlotProps } from '@mui/material';
 
 export interface StereoMixViewProps {
     mix: StereoMix;
@@ -58,26 +59,40 @@ export default function StereoMixView({ mix: { spec, parts }, isEditable = false
         }
     }, [setLeft, setRight]);
 
-    console.log(`left: ${left}; right: ${right}`);
+    const factorTextSlotProps = {
+        input: { style: { padding: 0, textAlign: 'center', margin: 0 } }
+    };
+
+    interface CompactTextInputProps { value: string }
+    function CompactTextInput({value} : CompactTextInputProps) {
+        return <OutlinedInput
+            slotProps={{
+                input: { style: { padding: 0, textAlign: 'center', margin: 0 } }
+            }}
+            value={value}
+            disabled
+            fullWidth
+        />
+    }
 
     return (
         <Box sx={{ width: '100%' }}>
             <Stack spacing={2}>
                 <Grid container size={12}>
                     <Grid size={2}>
-                        <Typography variant="h6" gutterBottom>Part</Typography>
+                        <Typography variant="overline" gutterBottom>Part</Typography>
                     </Grid>
                     <Grid size={5}>
-                        <Typography variant="h6" gutterBottom>Left</Typography>
+                        <Typography variant="overline" gutterBottom>Left</Typography>
                     </Grid>
                     <Grid size={5}>
-                        <Typography variant="h6" gutterBottom>Right</Typography>
+                        <Typography variant="overline" gutterBottom>Right</Typography>
                     </Grid>
                 </Grid>
                 {Array.from({length: count }).map((_, i) => (
                     <Grid container spacing={2} key={`row-${i}`}>
                         <Grid size={2}>
-                            <Typography variant="subtitle1" color="text.secondary">{parts[i]}</Typography>
+                            <Typography variant="body1" color="text.secondary">{parts[i]}</Typography>
                         </Grid>
                         <Grid size={5}>
                             <Grid container spacing={1} alignItems="center">
@@ -93,13 +108,7 @@ export default function StereoMixView({ mix: { spec, parts }, isEditable = false
                                         />
                                 </Grid>
                                 <Grid size={4}>
-                                    <TextField
-                                        // sx={{height: 50}}
-                                        value={fmt(left[i])}
-                                        size="small"
-                                        disabled
-                                        fullWidth
-                                    />
+                                    <CompactTextInput value={fmt(left[i])}/>
                                 </Grid>
                             </Grid>
                         </Grid>
@@ -117,12 +126,7 @@ export default function StereoMixView({ mix: { spec, parts }, isEditable = false
                                     />
                                 </Grid>
                                 <Grid size={4}>
-                                    <TextField
-                                        value={fmt(right[i])}
-                                        size="small"
-                                        disabled
-                                        fullWidth
-                                    />
+                                    <CompactTextInput value={fmt(right[i])}/>
                                 </Grid>
                             </Grid>
                         </Grid>
