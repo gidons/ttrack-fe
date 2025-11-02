@@ -19,7 +19,6 @@ export interface MixDialogProps extends DialogProps<{song: Song}, MixTrack> {
 export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) {
     const [error, setError] = React.useState<Error>(null);
     const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
-    const [existingMixes, setExistingMixes] = React.useState<StereoMix[]>([]);
     const [currentMix, setCurrentMix] = React.useState<StereoMix>(NULL_STEREO_MIX);
     const [trackName, setTrackName] = React.useState('');
     const [createdTrack, setCreatedTrack] = React.useState<Partial<MixTrack>>({});
@@ -29,10 +28,11 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
         try {
             console.log(`Loading dialog data for song ${song.id}`);
             const fetchedMixes = await getMixesForSong(song.id);
-            setExistingMixes(fetchedMixes.map((t) => t.mix));
+            const existingMixNames = new Set(fetchedMixes.map(m => m.mix.name));
+            console.log(`Existing mix names: ${existingMixNames}`);
 
             const fetchedDflMixes = await getDefaultMixesForSong(song.id);
-            setDefaultMixes(fetchedDflMixes);
+            setDefaultMixes(fetchedDflMixes.filter(m => !existingMixNames.has(m.name)));
         } catch (fetchError) {
             setError(fetchError as Error);
         }
@@ -61,7 +61,7 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
                     console.log(`Setting mix to ${JSON.stringify(selectedMix)}`)
                     setCurrentMix(selectedMix);
                     setIsCustomMix(false);
-                    setTrackName(n => n || selectedMix.name);
+                    setTrackName(selectedMix.name);
                 } else {
                     console.log("Mix not found.");
                 }
