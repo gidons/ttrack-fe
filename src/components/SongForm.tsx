@@ -141,6 +141,7 @@ export default function SongForm(props: SongFormProps) {
         <FormGroup>
             <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
                 {makeTextField('title', 'title', 'Title')}
+                {makeTextField('shortTitle', 'shortTitle', 'Short Title')}
                 {makeTextField('arranger', 'arranger', 'Arranger')}
                 <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
                     <FormControl error={!!formErrors.key} fullWidth>

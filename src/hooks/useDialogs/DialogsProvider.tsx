@@ -36,6 +36,7 @@ export default function DialogsProvider(props: DialogProviderProps) {
         payload: P,
         options: OpenDialogOptions<R> = {},
     ) {
+        console.log("Starting requestDialog");
         const { onClose = async () => { } } = options;
         let resolve: ((result: R) => void) | undefined;
         const promise = new Promise<R>((resolveImpl) => {

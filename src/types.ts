@@ -1,6 +1,7 @@
 export interface Song {
   id: string;
   title: string;
+  shortTitle?: string;
   arranger?: string;
   key?: string;
   durationSec?: number;
@@ -15,12 +16,29 @@ export interface StereoMix {
   name: string;
   parts: string[];
   spec: StereoMixSpec;
+  pitchShift: number;
+  speedFactor: number;
 }
 
 export const NULL_STEREO_MIX: StereoMix = {
   name: "N/A",
   parts: [],
-  spec: { leftFactors: [], rightFactors: [] }
+  spec: { leftFactors: [], rightFactors: [] },
+  pitchShift: 0,
+  speedFactor: 1
+}
+
+export const STD_MIX_TYPES = ["Full Mix", "Solo", "Dominant", "Left", "Missing"]
+
+export function fullMixForParts(name: string, parts: Array<string>): StereoMix {
+  const n = parts.length
+  return {
+    name,
+    parts,
+    spec: { leftFactors: Array(n).fill(1/n), rightFactors: Array(n).fill(1/n) },
+    pitchShift: 0,
+    speedFactor: 1
+  }
 }
 
 export interface TrackInfo {
@@ -29,6 +47,7 @@ export interface TrackInfo {
   readonly durationSec: number;
   readonly created: Date;
   readonly updated: Date;
+  readonly currentTaskId: string;
   readonly url: string;
   readonly mediaUrl: string;
 }
@@ -50,6 +69,10 @@ export function isValidTrack(t: Partial<TrackInfo>): t is Track { return t != nu
 export function isValidMixTrack(t: Partial<MixTrack>): t is MixTrack { return isValidTrack(t) && isMixTrack(t) }
 export function isValidPartTrack(t: Partial<PartTrack>): t is PartTrack { return isValidTrack(t) && isPartTrack(t) }
 
+export function isTrackUpdating(t: TrackInfo): boolean {
+  return !!t.currentTaskId
+}
+
 export function trackName(t: Track): string {
   return isMixTrack(t) ? t.trackId : t.part;
 }
@@ -65,10 +88,12 @@ export function stereoMix(t: Track): StereoMix {
       spec: {
         leftFactors: [1.0],
         rightFactors: [1.0]
-      }
+      },
+      pitchShift: 0,
+      speedFactor: 1
     }
   }
-  return { name: "", parts: [], spec: { leftFactors: [], rightFactors: [] } };
+  return NULL_STEREO_MIX
 }
 
 export function secondsToHMS(seconds: number): string {
@@ -77,7 +102,9 @@ export function secondsToHMS(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   const hDisplay = h > 0 ? h + ":" : "";
-  const mDisplay = m > 0 ? m + ":" : "";
+  const mDisplay = h > 0 ? 
+    m.toString().padStart(2, '0') + ":" : 
+    (m > 0 ? m + ":" : "");
   const sDisplay = s.toString().padStart(2, '0');
   return (hDisplay + mDisplay + sDisplay).trim();
 }

@@ -1,6 +1,12 @@
-import { FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography, useEventCallback } from '@mui/material';
+//
+// DEPRECATED
+//
+
+
+
+import { Button, Checkbox, FormControl, FormControlLabel, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography, useEventCallback } from '@mui/material';
 import * as React from 'react';
-import { createMixTrack, getDefaultMixesForSong, getMixesForSong, uploadPartTrack } from '../data/songs';
+import { createMixTrack, getDefaultMixesForSong, getMixesForSong, uploadPartTrack, uploadPartTracks } from '../data/songs';
 import { DialogValidationError, FormDialog, FormDialogPayload } from '../hooks/useDialogs/FormDialog';
 import { DialogProps, useDialogs } from '../hooks/useDialogs/useDialogs';
 import { isValidMixTrack, isValidPartTrack, MixTrack, NULL_STEREO_MIX, PartTrack, Song, StereoMix, trackName } from '../types';
@@ -13,13 +19,23 @@ function noOpClose<T>() {
     }
 };
 
+/**********************************************************************************/
+/*                                MixDialog
+/**********************************************************************************/
+
 export interface MixDialogProps extends DialogProps<{song: Song}, MixTrack> {
 }
 
 export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) {
+    console.log("MixDialog: start render");
+
+    const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: "custom"};
+
+    const [isLoading, setIsLoading] = React.useState(false)
+    const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [error, setError] = React.useState<Error>(null);
     const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
-    const [currentMix, setCurrentMix] = React.useState<StereoMix>(NULL_STEREO_MIX);
+    const [currentMix, setCurrentMix] = React.useState<StereoMix>(INITIAL_CUSTOM_MIX);
     const [trackName, setTrackName] = React.useState('');
     const [createdTrack, setCreatedTrack] = React.useState<Partial<MixTrack>>({});
     const [isCustomMix, setIsCustomMix] = React.useState(false);
@@ -29,14 +45,15 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
             console.log(`Loading dialog data for song ${song.id}`);
             const fetchedMixes = await getMixesForSong(song.id);
             const existingMixNames = new Set(fetchedMixes.map(m => m.mix.name));
-            console.log(`Existing mix names: ${existingMixNames}`);
+            console.log(`Existing mix names: ${[...existingMixNames].join()}`);
 
-            const fetchedDflMixes = await getDefaultMixesForSong(song.id);
+            // const fetchedDflMixes = await getDefaultMixesForSong(song.id);
+            const fetchedDflMixes: StereoMix[] = [{name: "full mix", parts: ["Bass", "Lead"], spec: {leftFactors: [0.5, 0.5], rightFactors: [0.5, 0.5]}, speedFactor: 1, pitchShift: 0}];
             setDefaultMixes(fetchedDflMixes.filter(m => !existingMixNames.has(m.name)));
         } catch (fetchError) {
             setError(fetchError as Error);
         }
-    }, [song]);
+    }, [setDefaultMixes, setError]);
 
     const handleClose = React.useCallback(async (t) => {
         console.log(`handleClose: ` + JSON.stringify(t));
@@ -119,19 +136,30 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
                         onChange={handleTrackNameChange}
                     />
                 </FormControl>
+                <Button disabled={!open}>
+                    Cancel
+                </Button>
+                <Button
+                    disabled={!open || isLoading /* || !isValid()*/} 
+                    loading={isSubmitting}
+                    onClick={setIsSubmitting(true)}
+                    type="submit">
+                    Create
+                </Button>
             </Grid>
             {/* Note: each mix view has to have its own key to allow for separate states. */}
             <StereoMixView key={`stereomix-view-${currentMix?.name ?? 'null'}`} mix={currentMix} isEditable={isCustomMix}/>
         </Stack>
     );
-    
-    const payload: FormDialogPayload<MixTrack> = {
+
+    const payload = React.useMemo<FormDialogPayload<MixTrack>>(() => ({
         title: title,
         content: content,
         onSubmit: onSubmit,
-        loadData: loadData
-    }
-    
+        loadData: loadData,
+        // validate: validateForm
+    }), [title, content, onSubmit, loadData]);
+
     return <FormDialog
         open={open}
         payload={payload}
@@ -139,99 +167,142 @@ export function MixDialog({open, payload: { song }, onClose } : MixDialogProps) 
     />
 }
 
+/**********************************************************************************/
+/*                                UploadPartDialog
+/**********************************************************************************/
+
 export interface UploadPartDialogProps extends DialogProps<{song: Song}, PartTrack> {
 }
 
 export function UploadPartDialog({ open, payload: { song }, onClose } : UploadPartDialogProps) {
     const defaultParts = ["Bass", "Bari", "Lead", "Tenor"];
-
     const [error, setError] = React.useState<Error>(null);
-    const [selectedPartName, setPartName] = React.useState("");
-    const [customPartName, setCustomPartName] = React.useState("");
-    const [isCustomPart, setIsCustomPart] = React.useState(false);
-    const [createdTrack, setCreatedTrack] = React.useState<Partial<PartTrack>>({});
-    const [audioFile, setAudioFile] = React.useState<File>(null);
+    // Each row: { selectedPartName, customPartName, isCustomPart, audioFile }
+    const [rows, setRows] = React.useState([
+        { selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }
+    ]);
 
     const title = <div>Upload part audio for <em>{song?.title??"..."}</em></div>;
 
-    const handleCustomPartNameChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setCustomPartName(e.target.value);
-    }, [setCustomPartName]);
-
-    const handleSelectedPartChange = React.useCallback((e: SelectChangeEvent<HTMLSelectElement>) => {
+    // Handlers for each row
+    const handleSelectedPartChange = (rowIdx: number) => (e: SelectChangeEvent<HTMLSelectElement>) => {
         const selectedPartName = e.target.value.toString();
-        setIsCustomPart(selectedPartName == 'custom');
-        setPartName(selectedPartName);
-    }, [setPartName, setIsCustomPart]);
+        setRows(rows => rows.map((row, idx) => idx === rowIdx ? {
+            ...row,
+            selectedPartName,
+            isCustomPart: selectedPartName === 'custom',
+            // Reset customPartName if not custom
+            customPartName: selectedPartName === 'custom' ? row.customPartName : ""
+        } : row));
+    };
 
-    const handleAudioFileChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCustomPartNameChange = (rowIdx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setRows(rows => rows.map((row, idx) => idx === rowIdx ? { ...row, customPartName: value } : row));
+    };
+
+    const handleAudioFileChange = (rowIdx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files[0];
-        setAudioFile(selectedFile);
-    }, [setAudioFile]);
+        setRows(rows => rows.map((row, idx) => idx === rowIdx ? { ...row, audioFile: selectedFile } : row));
+    };
 
-    const content = 
+    const handleAddRow = () => {
+        setRows(rows => [...rows, { selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }]);
+    };
+
+    const handleRemoveRow = (rowIdx: number) => {
+        setRows(rows => rows.filter((_, idx) => idx !== rowIdx));
+    };
+
+    const content = (
         <Stack spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', padding: 1 }}>
-                <FormControl fullWidth>
-                    <InputLabel required id="part-selector-label">Part</InputLabel>
-                    <Select
-                        value={selectedPartName ?? ''}
-                        onChange={handleSelectedPartChange as SelectProps['onChange']}
-                        labelId="part-selector-label"
-                        name="defaultPart"
-                        label="Part"
-                        fullWidth
-                    >
-                        {defaultParts.map((part) => 
-                            <MenuItem value={part}>{part}</MenuItem>
+            {rows.map((row, idx) => (
+                <Grid key={idx} container spacing={2} alignItems="center" sx={{ padding: 1 }}>
+                    <Grid size={{ xs: 4, sm: 3 }}>
+                        <FormControl fullWidth>
+                            <InputLabel required id={`part-selector-label-${idx}`}>Part</InputLabel>
+                            <Select
+                                value={row.selectedPartName ?? ''}
+                                onChange={handleSelectedPartChange(idx) as SelectProps['onChange']}
+                                labelId={`part-selector-label-${idx}`}
+                                name="defaultPart"
+                                label="Part"
+                                fullWidth
+                            >
+                                {defaultParts.map((part) => 
+                                    <MenuItem key={part} value={part}>{part}</MenuItem>
+                                )}
+                                <MenuItem value="custom">Custom</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 4, sm: 3 }}>
+                        <FormControl fullWidth>
+                            <TextField 
+                                name='partName'
+                                value={row.customPartName}
+                                aria-label='Part Name'
+                                label='Part Name'
+                                disabled={!row.isCustomPart}
+                                onChange={handleCustomPartNameChange(idx)}
+                            />
+                        </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 4, sm: 4 }}>
+                        <FormControl fullWidth>
+                            <Input
+                                type='file'
+                                aria-label='Audio file'
+                                onChange={handleAudioFileChange(idx)}
+                            />
+                        </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 2 }} sx={{ display: 'flex', alignItems: 'center', gap: 1 } }>
+                        <button type="button" onClick={handleAddRow} aria-label="Add row" style={{ marginRight: 8 }}>+</button>
+                        {idx > 0 && (
+                            <button type="button" onClick={() => handleRemoveRow(idx)} aria-label="Remove row">x</button>
                         )}
-                        <MenuItem value="custom">Custom</MenuItem>
-                    </Select>
-                </FormControl>
-                <FormControl fullWidth>
-                    <TextField 
-                        name='partName'
-                        value={customPartName}
-                        aria-label='Part Name'
-                        label='Part Name'
-                        disabled={!isCustomPart}
-                        onChange={handleCustomPartNameChange}
-                    />
-                </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                <FormControl>
-                    <Input
-                        type='file'
-                        aria-label='Audio file'
-                        onChange={handleAudioFileChange}/>
-                </FormControl>
-            </Grid>
-        </Stack>;
+                    </Grid>
+                </Grid>
+            ))}
+        </Stack>
+    );
 
-    const partName = isCustomPart ? customPartName : selectedPartName;
-
+    // Validation: all rows must have file and part name
     const validateForm = React.useCallback(() => {
         let errors: DialogValidationError[] = [];
-        if (!audioFile) { errors.push({ field: 'audioFile', message: 'Please select a file for upload' })}
-        if (!partName) { errors.push({ field: 'partName', message: 'Please select or set a name for the part'})}
-        console.log("validate: " + JSON.stringify(errors));
+        rows.forEach((row, idx) => {
+            const partName = row.isCustomPart ? row.customPartName : row.selectedPartName;
+            if (!row.audioFile) {
+                errors.push({ field: `audioFile${idx}`, message: `Row ${idx+1}: Please select a file for upload` });
+            }
+            if (!partName) {
+                errors.push({ field: `partName${idx}`, message: `Row ${idx+1}: Please select or set a name for the part` });
+            }
+        });
         return errors;
-    }, [audioFile, partName]);
+    }, [rows]);
 
     const onSubmit = React.useCallback(async () => {
-        console.log(`Creating track for part '${selectedPartName}' with file ${audioFile}`);
+        // Gather part names and files
+        const parts: string[] = rows.map(row => row.isCustomPart ? row.customPartName : row.selectedPartName);
+        const files: File[] = rows.map(row => row.audioFile);
         try {
-            return uploadPartTrack(song.id, partName, audioFile);
+            const tracks = await uploadPartTracks(song.id, parts, files);
+            return tracks[0];
         } catch(e) {
             setError(e as Error);
             throw e;
         }
-    }, [song, partName, audioFile]);
+    }, [song, rows]);
 
-    const handleClose = React.useCallback(async (track) => {
-        console.log(`handleClose`);
-        return onClose(isValidPartTrack(track) ? track : null);
+    const handleClose = React.useCallback(async (tracks) => {
+        // Always return the first track if valid array
+        if (Array.isArray(tracks) && tracks.length > 0 && tracks.every(isValidPartTrack)) {
+            return onClose(tracks[0]);
+        } else {
+            return onClose(null);
+        }
     }, [onClose]);
 
     const payload: FormDialogPayload<PartTrack> = {
@@ -239,16 +310,16 @@ export function UploadPartDialog({ open, payload: { song }, onClose } : UploadPa
         content: content,
         onSubmit: onSubmit,
         validate: validateForm
-    }
+    };
     return <FormDialog
         open={open}
         payload={payload}
-        onClose={(track) => handleClose(track)}
+        onClose={handleClose}
     />
 }
 
 export interface OpenCreateMixDialog {
-    (song: Song): Promise<MixTrack>;
+    (payload: {song: Song}): Promise<MixTrack>;
 }
 
 export interface OpenUploadPartDialog {
@@ -263,15 +334,17 @@ export interface TrackDialogsHook {
 export function useTrackDialogs(): TrackDialogsHook {
     const dialogs = useDialogs();
     
-    const openCreateMixDialog = useEventCallback<OpenCreateMixDialog>((song) => {
+    const openCreateMixDialog = useEventCallback<OpenCreateMixDialog>((payload) => {
         // const onClose = noOpClose<MixTrack>();
-        return dialogs.open(MixDialog, { song }, {});
+        console.log(`openCreateMixDialog: ${payload}`)
+        return dialogs.open(MixDialog, payload, {});
     });
 
-    const openUploadPartDialog = useEventCallback<OpenUploadPartDialog>((song) => {
+    // const openUploadPartDialog = useEventCallback<OpenUploadPartDialog>((song) => {
+    const openUploadPartDialog = (song) => {
         // const onClose = noOpClose<PartTrack>();
         return dialogs.open(UploadPartDialog, { song }, { });
-    });
+    };
 
     return React.useMemo(() => ({ 
         openCreateMixDialog,

@@ -13,7 +13,8 @@ export interface StereoMixViewProps {
     isEditable?: boolean;
 }
 
-export default function StereoMixView({ mix: { spec, parts }, isEditable = false }: StereoMixViewProps) {
+export default function StereoMixView({ mix: { name, spec, parts, speedFactor, pitchShift }, isEditable = false }: StereoMixViewProps) {
+    console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
     const [left, setLeft] = React.useState(spec.leftFactors ?? []);
     const [right, setRight] = React.useState(spec.rightFactors ?? []);
 

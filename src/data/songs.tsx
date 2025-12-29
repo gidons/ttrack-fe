@@ -2,12 +2,14 @@ import axios from 'axios';
 import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TrackInfo } from '../types';
 import { M } from 'react-router/dist/development/routeModules-D5iJ6JYT';
 
+// const serverUrl = 'https://shavit-ttrack.azurewebsites.net';
 const serverUrl = 'http://localhost:8080';
 const client = axios.create({ baseURL: serverUrl })
 
 type StereoMixDTO = Omit<StereoMix, 'spec'> & { mix: StereoMixSpec };
-type MixTrackDTO = Omit<MixTrack, 'mix'> & { mixInfo: StereoMixDTO };
-type PartTrackDTO = TrackInfo;
+type MixTrackDTO = Omit<TrackDTO, 'mix'> & { mixInfo: StereoMixDTO };
+type TrackDTO = Omit<Omit<TrackInfo, 'updated'>, 'created'> & { updated: string; created: string; }
+type PartTrackDTO = TrackDTO;
 
 export async function getAllSongs() : Promise<Song[]> {
     const response = await client.get('/songs');
@@ -37,11 +39,33 @@ export async function getPartsForSong(songId: string) : Promise<PartTrack[]> {
     return response.data.map(partTrackDtoToPartTrack);
 }
 
-export async function uploadPartTrack(songId: string, partName: string, audioFile: File, direct: boolean = true) : Promise<PartTrack> {
+
+export async function uploadPartTrack(songId: string, partName: string, audioFile: File) : Promise<PartTrack> {
     const formData = new FormData();
     formData.append('audioFile', audioFile);
-    const response = await client.put(`/songs/${songId}/parts/${partName}?direct=${direct}`, formData);
+    const response = await client.put(`/songs/${songId}/parts/${partName}`, formData);
     return response.data;
+}
+
+/**
+ * Upload multiple part tracks for a song.
+ * @param songId Song ID
+ * @param parts Array of part names
+ * @param files Array of File objects (must match parts order)
+ * @returns Array of PartTrack objects
+ */
+export async function uploadPartTracks(songId: string, parts: string[], files: File[]): Promise<PartTrack[]> {
+    if (parts.length !== files.length) {
+        throw new Error("Parts and files arrays must be the same length");
+    }
+    const formData = new FormData();
+    for (let i = 0; i < parts.length; i++) {
+        formData.append(`file${i+1}`, files[i]);
+        formData.append(`part${i+1}`, parts[i]);
+    }
+    const response = await client.put(`/songs/${songId}/parts?overwrite=true`, formData);
+    // Expecting an array of PartTrackDTOs
+    return response.data.map(partTrackDtoToPartTrack);
 }
 
 export async function getMixesForSong(songId: string) : Promise<MixTrack[]> {
@@ -50,8 +74,15 @@ export async function getMixesForSong(songId: string) : Promise<MixTrack[]> {
     return dtos.map(mixTrackDtoToMixTrack);
 }
 
-function partTrackDtoToPartTrack(dto: PartTrackDTO) {
-    return { ...dto, part: dto.trackId };
+function trackDtoToTrack(dto: TrackDTO) : TrackInfo {
+    const { created, updated, ...others } = dto;
+    const createdDate = (created ? new Date(created) : null)
+    const updatedDate = (updated ? new Date(updated) : null)
+    return { ...others, created: createdDate, updated: updatedDate }
+}
+
+function partTrackDtoToPartTrack(dto: PartTrackDTO): PartTrack {
+    return { ...trackDtoToTrack(dto), part: dto.trackId };
 }
 
 function mixDtoToMix(dto: StereoMixDTO): StereoMix {
@@ -61,7 +92,7 @@ function mixDtoToMix(dto: StereoMixDTO): StereoMix {
 
 function mixTrackDtoToMixTrack(dto: MixTrackDTO): MixTrack {
     const { mixInfo, ...others } = dto;
-    return { ...others, mix: mixDtoToMix(dto.mixInfo) };
+    return { ...trackDtoToTrack(others), mix: mixDtoToMix(dto.mixInfo) };
 }
 
 export async function getDefaultMixesForSong(songId: string) : Promise<StereoMix[]> {
@@ -75,7 +106,29 @@ export async function createMixTrack(songId: string, mix: StereoMix, isCustom: b
         parts: mix.parts,
         description: isCustom ? JSON.stringify(mix.spec) : null
     });
-    return mixTrackDtoToMixTrack(response.data);
+    return mixTrackDtoToMixTrack(response.data[0]);
+}
+
+export async function createMixPackage(
+        songId: string, 
+        parts: string[], 
+        mixDescriptions: string[],
+        packageDescription: string,
+        speedFactor: number,
+        pitchShift: number) : Promise<MixTrack[]> {
+    const response = await client.post(`/songs/${songId}/mixes`,{
+        parts: parts,
+        mixDescriptions: mixDescriptions,
+        packageDescription: packageDescription.trim() || null,
+        pitchShift: pitchShift,
+        speedFactor: speedFactor
+    })
+    return (response.data as MixTrackDTO[]).map(mixTrackDtoToMixTrack)
+}
+
+export async function deleteTrack(trackUrl: string) {
+    console.log(`Deleting track with URL: ${trackUrl}`)
+    client.delete(trackUrl)
 }
 
 export function getDownloadUrl(path: string) { return serverUrl + path; }

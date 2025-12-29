@@ -23,22 +23,32 @@ import useNotifications from '../hooks/useNotifications/useNotifications';
 import { MixTrack, PartTrack, stereoMix, trackName, type Song, type Track } from '../types';
 import PageContainer from './PageContainer';
 import StereoMixView from './StereoMixView';
-import { useTrackDialogs } from './trackDialogs';
 import { TrackList } from './TrackList';
+import { BulkMixDialog } from './BulkMixDialog';
+import { UploadPartDialog } from './UploadPartDialog';
+import { SingleMixDialog } from './SingleMixDialog';
+import { MixDialog } from './MixDialog';
+
+type DialogName = "createMix" | "uploadPart" | "";
 
 export default function ViewSong() {
+
+    console.log("ViewSong: start render");
+
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
     console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
     const navigate = useNavigate();
 
     const dialogs = useDialogs();
-    const { openCreateMixDialog, openUploadPartDialog } = useTrackDialogs();
     const notifications = useNotifications();
 
     const [song, setSong] = React.useState<Song | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
+    const [openDialog, setOpenDialog] = React.useState<DialogName>("");
+
+    const songPayload = React.useMemo(() => ({ song }), [song]);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -111,18 +121,8 @@ export default function ViewSong() {
         setSelectedTrack(track);
     }, [setSelectedTrack]);
 
-    const handleAddMix = React.useCallback(async () => {
-        if (!song) { return null; }
-        const createdTrack: MixTrack = await openCreateMixDialog(song);
-        console.log("Created track: " + JSON.stringify(createdTrack));
-        return createdTrack;
-    }, [song]);
-
     const handleAddPart = React.useCallback(async () => {
-        if (!song) { return null; }
-        const createdTrack: PartTrack = await openUploadPartDialog(song);
-        console.log("Created track: " + JSON.stringify(createdTrack));
-        return createdTrack;
+        setOpenDialog("uploadPart")
     }, [song]);
 
     const renderView = React.useMemo(() => {
@@ -168,9 +168,9 @@ export default function ViewSong() {
             <Box sx={{ flexGrow: 1, width: '100%' }}>
                 <Grid container spacing={2} sx={{ width: '100%' }}>
                     {makeDisplayField("Title", song.title)}
+                    {makeDisplayField("Short Title", song.shortTitle)}
                     {makeDisplayField("Arranger", song.arranger)}
                     {makeDisplayField("Key", song.key)}
-                    {/* {makeDisplayField("Duration", secondsToHMS(song.durationSec))} */}
                 </Grid>
                 <Divider sx={{ my: 3 }} />
                 <Stack direction="row" spacing={2} justifyContent="space-between">
@@ -210,45 +210,7 @@ export default function ViewSong() {
         handleSongDelete,
     ]);
 
-    const mix = stereoMix(selectedTrack);
-
-    const partTracksList = <TrackList
-        songId={songId}
-        title="Parts"
-        typeColumns={[
-            { field: 'part', headerName: 'Part', type: 'string', width: 80 },
-        ]}
-        fetchTracks={getPartsForSong}
-        idProp="part"
-        selected={selectedPart}
-        onFoundSelected={handleFoundSelected}
-        playButtonPath={`/songs/${songId}/part/{id}`} 
-        onAdd={handleAddPart}/>;
-
-    const mixTracksList = <TrackList
-        songId={songId}
-        title="Mixes"
-        typeColumns={[
-            { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
-        ]}
-        fetchTracks={getMixesForSong}
-        idProp="name"
-        selected={selectedMixName}
-        onFoundSelected={handleFoundSelected}
-        playButtonPath={`/songs/${songId}/mix/{id}`}
-        onAdd={handleAddMix} />;
-        
-    const playerView = selectedTrack ? (
-        <Stack
-            sx={{ width: '100%', justifyContent: "center", alignItems: 'center' }}
-            spacing={2}
-            padding={2}
-        >
-            <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
-            <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)} />
-            <Box sx={{width:'50%'}}><StereoMixView mix={mix}/></Box>
-        </Stack>
-    ) : (<div />);
+    const mix = React.useMemo(() => stereoMix(selectedTrack), [selectedTrack]);
 
     return (
         <PageContainer
@@ -258,7 +220,6 @@ export default function ViewSong() {
                 { title: isLoading ? "Loading..." : `${song.title}` },
             ]}
         >
-            {/* <CreateMixDialog open={addMixDialogOpen} onClose={handleAddMixClose} song={song}/> */}
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
             <Divider sx={{ my: 3 }} />
             <Stack
@@ -267,14 +228,61 @@ export default function ViewSong() {
                 spacing={2}
                 sx={{ width: '100%' }}>
                 <Box flexGrow='1'
-                    sx={{ width: '50%' }}>               
-                    {partTracksList}
+                    sx={{ width: '50%' }}>
+                    <UploadPartDialog
+                        open={openDialog == "uploadPart"}
+                        song={song}
+                        onClose={(success) => { setOpenDialog("")}}
+                        />
+                    <TrackList
+                        songId={songId}
+                        title="Parts"
+                        typeColumns={[
+                            { field: 'part', headerName: 'Part', type: 'string', width: 80 },
+                        ]}
+                        fetchTracks={getPartsForSong}
+                        idProp="part"
+                        selected={selectedPart}
+                        // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
+                        canDelete={(track: Track) => false}
+                        onFoundSelected={handleFoundSelected}
+                        playButtonPath={`/songs/${songId}/part/{id}`}
+                        onAdd={() => setOpenDialog("uploadPart")} 
+                    />
                 </Box>
                 <Box flexGrow='1'>
-                    {mixTracksList}
+                    <MixDialog
+                        open={openDialog == "createMix"}
+                        song={song}
+                        onClose={(success) => setOpenDialog("")}
+                    />
+                    <TrackList
+                        songId={songId}
+                        title="Mixes"
+                        typeColumns={[
+                            { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
+                        ]}
+                        fetchTracks={getMixesForSong}
+                        idProp="name"
+                        selected={selectedMixName}
+                        onFoundSelected={handleFoundSelected}
+                        canDelete={(track: Track) => track.trackId != 'All'}
+                        playButtonPath={`/songs/${songId}/mix/{id}`}
+                        onAdd={() => setOpenDialog("createMix")} 
+                    />
                 </Box>
             </Stack>
-            { playerView }
+            { selectedTrack ? (
+                <Stack
+                    sx={{ width: '100%', justifyContent: "center", alignItems: 'center' }}
+                    spacing={2}
+                    padding={2}
+                >
+                    <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
+                    <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)} />
+                    <Box sx={{ width: '50%' }}><StereoMixView mix={mix} /></Box>
+                </Stack>
+            ) : (<div />) }
         </PageContainer>
     );
 }

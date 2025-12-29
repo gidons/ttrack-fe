@@ -14,8 +14,9 @@ Songs Page
 Song Page
 ---------
 - Add all keys to dropdown (or break down to multiple fields, see below)
+- If a track is locked by a task, show it as "processing" or something and block actions.
 - Upload-part:
-    - Allow uploading multiple parts from same dialog
+    + Allow uploading multiple parts from same dialog
     - Show errors on submit
     - After close, refresh track list
 - Create-mix:
@@ -23,6 +24,8 @@ Song Page
     - Show errors before on submit
     - After close, refresh track list
 - Add upload-all-parts (ZIP? multi-channel WAV/MP3?)
+- Add download-all-as-zip for mixes
+- Add download-all-as-zip for parts
 
 Mix Packages
 ------------

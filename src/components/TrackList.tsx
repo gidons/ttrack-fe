@@ -5,13 +5,13 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import Download from '@mui/icons-material/Download';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x-data-grid';
+import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import React from 'react';
-import { getDownloadUrl } from '../data/songs';
-import { secondsToHMS, Track } from '../types';
-import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
+import { deleteTrack, getDownloadUrl } from '../data/songs';
+import { isTrackUpdating, secondsToHMS, Track } from '../types';
+import { Button, Grid, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
-
+import { useDialogs } from '../hooks/useDialogs/useDialogs';
 
 /**
  * This component is intended to be included in the song page, not to be an independent page.
@@ -25,10 +25,11 @@ interface TrackListProps {
     idProp: string;
     /** The selected track ID, if any */ 
     selected?: string;
-    onFoundSelected: (track) => void;
+    onFoundSelected: (track: Track) => void;
+    canDelete: (track: Track) => boolean;
     playButtonPath: string;
     // Add action: either a callback or a path to go to
-    onAdd?: () => Promise<Track>;
+    onAdd?: () => void;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -46,6 +47,44 @@ const TableToolbar = styled('div')(({ theme }) => ({
   marginLeft: 'auto',
 }));
 
+function toUpdatedTime(updated: Date): string {
+    const secAgo = Math.trunc((new Date().getTime() - updated.getTime()) / 1000)
+    if (secAgo < 2) {
+        return "Just now"
+    }
+    if (secAgo < 60) {
+        return `${secAgo} seconds ago`
+    }
+    const minAgo = Math.trunc(secAgo / 60)
+    if (minAgo < 60) {
+        return `${minAgo} minute(s) ago`
+    }
+    const hoursAgo = Math.trunc(minAgo / 60);
+    if (hoursAgo < 24) {
+        return `${hoursAgo} hour(s) ago`
+    }
+    const daysAgo = Math.trunc(hoursAgo / 24);
+    if (daysAgo < 3) {
+        return `$daysAgo day(s) ago`
+    }
+    return updated.toLocaleDateString()
+
+}
+
+function renderUpdatedCell(params: GridRenderCellParams<Track, any>) {
+    // console.log(`Rendering updated cell: ${JSON.stringify(params.row)}`)
+    const track = params.row
+    const updated = track.updated
+    const isUpdating = isTrackUpdating(track)
+    return (
+        <Box className='center'>
+            <Typography>
+                {isUpdating ? "updating..." : toUpdatedTime(updated)}
+            </Typography>
+        </Box>
+    )
+}
+
 export function TrackList({ 
     songId,
     title,
@@ -54,6 +93,7 @@ export function TrackList({
     selected,
     onFoundSelected,
     playButtonPath,
+    canDelete,
     onAdd,
 }: TrackListProps) {
 
@@ -61,6 +101,7 @@ export function TrackList({
     const [error, setError] = React.useState<Error | null>(null);
     const [tracks, setTracks] = React.useState<Array<Track>>([]);
     const navigate = useNavigate();
+    const dialogs = useDialogs();
 
     const idProp = 'trackId';
 
@@ -76,13 +117,29 @@ export function TrackList({
         document.body.removeChild(link);
     }, []);
     
-    const handleRowDelete = React.useCallback((row) => () => {
-        alert(`Deleting track ID ${row.id}`);
+    const handleRowDelete = React.useCallback((row: Track) => async() => {
+        if (canDelete(row)) {
+            const confirmed = await dialogs.confirm(
+                `Do you wish to delete ${row.trackId}?`,
+                {
+                    title: `Delete track?`,
+                    severity: 'error',
+                    okText: 'Delete',
+                    cancelText: 'Cancel',
+                },
+            );
+            if (confirmed) {
+                await deleteTrack(row.url)
+                await loadData()
+            }
+        } else {
+            await dialogs.alert(`Track ${row.trackId} may not be deleted at this time.`)
+        }
     }, []);
     
-    const handleRowPlay = React.useCallback((row) => () => {
+    const handleRowPlay = React.useCallback((row: Track) => () => {
         navigate(playButtonPath.replace('{id}', row[idProp]));
-    }, []);
+    }, [navigate, playButtonPath]);
     
     const columns = React.useMemo<GridColDef[]>(() => (
         ([] as GridColDef[]).concat(
@@ -90,6 +147,9 @@ export function TrackList({
         ).concat([
             { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS,
                  sortable: false, disableColumnMenu: true },
+            { field: 'updated', headerName: 'Updated', type: 'date', width: 140, renderCell: renderUpdatedCell,
+                sortable: true, disableColumnMenu: true
+             },
             {
                 field: 'actions',
                 type: 'actions',
@@ -102,6 +162,7 @@ export function TrackList({
                         key="play-item"
                         icon={<PlayArrow />}
                         label="Play"
+                        disabled={!row.mediaUrl}
                         onClick={handleRowPlay(row)}
                     />,
                     <GridActionsCellItem
@@ -115,11 +176,12 @@ export function TrackList({
                         key="delete-item"
                         icon={<DeleteIcon />}
                         label="Delete"
+                        disabled={!canDelete(row)}
                         onClick={handleRowDelete(row)}
                     />,
                 ]},
             },
-        ])), [handleDownload, handleRowDelete]);
+        ])), [handleDownload, handleRowDelete, canDelete]);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -141,10 +203,11 @@ export function TrackList({
     }, [isLoading, loadData])
 
     const handleAdd = React.useCallback(async () => {
-        const created = await onAdd();
-        if (created) {
-            loadData();
-        }
+        onAdd()
+        // const created = await onAdd();
+        // if (created) {
+        //     loadData();
+        // }
     }, [onAdd, loadData])
 
     function findSelectedTrack() {
@@ -155,8 +218,6 @@ export function TrackList({
             onFoundSelected(selectedTrack);
         }
     }
-
-    function handleCreateClick() { return <Alert severity="info">Creating</Alert> }
 
     React.useEffect(() => { loadData() }, [loadData])
     React.useEffect(() => { findSelectedTrack() }, [selected, isLoading, tracks]);

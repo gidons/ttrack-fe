@@ -42,6 +42,7 @@ export function SongList({ }: SongListProps) {
     
     const columns = React.useMemo<GridColDef[]>(() => [
         { field: 'title', headerName: 'Title', width: 300 },
+        { field: 'shortTitle', headerName: 'Short Title', width: 150 },
         { field: 'arranger', headerName: 'Arranger', width: 150 },
         { field: 'key', headerName: 'Key', width: 80 },
         // { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS },
@@ -87,7 +88,10 @@ export function SongList({ }: SongListProps) {
     const handleRefresh = React.useCallback(() => { 
         if (!isLoading) { loadData() } 
     }, [isLoading, loadData])
-    function handleCreateClick() { return <Alert severity="info">Creating</Alert> }
+
+    const handleCreateClick = React.useCallback(() => {
+        navigate('/songs/new');
+    }, [navigate]);
 
     React.useEffect(() => { loadData() }, [loadData])
 
