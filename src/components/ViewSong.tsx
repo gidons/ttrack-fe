@@ -20,14 +20,12 @@ import {
 } from '../data/songs';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { MixTrack, PartTrack, stereoMix, trackName, type Song, type Track } from '../types';
+import { stereoMix, trackName, type Song, type Track } from '../types';
+import { MixDialog } from './MixDialog';
 import PageContainer from './PageContainer';
 import StereoMixView from './StereoMixView';
 import { TrackList } from './TrackList';
-import { BulkMixDialog } from './BulkMixDialog';
 import { UploadPartDialog } from './UploadPartDialog';
-import { SingleMixDialog } from './SingleMixDialog';
-import { MixDialog } from './MixDialog';
 
 type DialogName = "createMix" | "uploadPart" | "";
 
@@ -47,8 +45,6 @@ export default function ViewSong() {
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
     const [openDialog, setOpenDialog] = React.useState<DialogName>("");
-
-    const songPayload = React.useMemo(() => ({ song }), [song]);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -120,10 +116,6 @@ export default function ViewSong() {
         console.log("Setting selected track to: " + JSON.stringify(track));
         setSelectedTrack(track);
     }, [setSelectedTrack]);
-
-    const handleAddPart = React.useCallback(async () => {
-        setOpenDialog("uploadPart")
-    }, [song]);
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -231,7 +223,7 @@ export default function ViewSong() {
                     sx={{ width: '50%' }}>
                     {openDialog == "uploadPart" && <UploadPartDialog
                         song={song}
-                        onClose={(success) => { setOpenDialog("")}}
+                        onClose={() => { setOpenDialog("")}}
                         />}
                     <TrackList
                         songId={songId}
@@ -243,6 +235,7 @@ export default function ViewSong() {
                         idProp="part"
                         selected={selectedPart}
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         canDelete={(track: Track) => false}
                         onFoundSelected={handleFoundSelected}
                         playButtonPath={`/songs/${songId}/part/{id}`}
@@ -252,7 +245,7 @@ export default function ViewSong() {
                 <Box flexGrow='1'>
                     {openDialog == "createMix" && <MixDialog
                         song={song}
-                        onClose={(success) => setOpenDialog("")}
+                        onClose={() => setOpenDialog("")}
                     />}
                     <TrackList
                         songId={songId}

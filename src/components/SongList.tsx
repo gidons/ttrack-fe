@@ -9,19 +9,16 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { DataGrid, GridActionsCellItem, GridColDef, GridEventListener, GridRowParams } from '@mui/x-data-grid';
+import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router';
-import { secondsToHMS, Song } from '../types';
+import { Song } from '../types';
 import PageContainer from './PageContainer';
-import { getAllSongs } from '../data/songs'
+import { getAllSongs } from '../data/songs';
 
-
-interface SongListProps {
-}
 
 const pageTitle = 'Songs';
 
-export function SongList({ }: SongListProps) {
+export function SongList() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [songs, setSongs] = React.useState<Array<Song>>([])

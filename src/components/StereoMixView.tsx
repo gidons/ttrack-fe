@@ -1,19 +1,18 @@
-import React, { ChangeEvent } from 'react';
+import React from 'react';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Slider from '@mui/material/Slider';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import { StereoMix } from '../types';
-import { Input, OutlinedInput, SlotCommonProps, SlotProps } from '@mui/material';
+import { OutlinedInput } from '@mui/material';
 
 export interface StereoMixViewProps {
     mix: StereoMix;
     isEditable?: boolean;
 }
 
-export default function StereoMixView({ mix: { name, spec, parts, speedFactor, pitchShift }, isEditable = false }: StereoMixViewProps) {
+export default function StereoMixView({ mix: { name, spec, parts }, isEditable = false }: StereoMixViewProps) {
     console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
     const [left, setLeft] = React.useState(spec.leftFactors ?? []);
     const [right, setRight] = React.useState(spec.rightFactors ?? []);
@@ -23,10 +22,8 @@ export default function StereoMixView({ mix: { name, spec, parts, speedFactor, p
     // helper to format number to 2 decimals
     const fmt = (n: number | undefined) => (typeof n === 'number' ? n.toFixed(2) : '0.00');
 
-    const rowHeight=40;
-
     const updateFactors = (factors: number[], index: number, newValue: number): number[] => {
-        let newFactors = [...factors];
+        const newFactors = [...factors];
         const oldValue = factors[index];
         const oldOtherTotal = 1.0 - oldValue;
         const newOtherTotal = 1.0 - newValue;
@@ -59,10 +56,6 @@ export default function StereoMixView({ mix: { name, spec, parts, speedFactor, p
             setRight(f => updateFactors(f, partIndex, value));
         }
     }, [setLeft, setRight]);
-
-    const factorTextSlotProps = {
-        input: { style: { padding: 0, textAlign: 'center', margin: 0 } }
-    };
 
     interface CompactTextInputProps { value: string }
     function CompactTextInput({value} : CompactTextInputProps) {

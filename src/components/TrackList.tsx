@@ -1,6 +1,6 @@
 import { PlayArrow } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add'
+import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import Download from '@mui/icons-material/Download';
 import Alert from '@mui/material/Alert';
@@ -9,7 +9,7 @@ import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRo
 import React from 'react';
 import { deleteTrack, getDownloadUrl } from '../data/songs';
 import { isTrackUpdating, secondsToHMS, Track } from '../types';
-import { Button, Grid, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
+import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 
@@ -71,7 +71,7 @@ function toUpdatedTime(updated: Date): string {
 
 }
 
-function renderUpdatedCell(params: GridRenderCellParams<Track, any>) {
+function renderUpdatedCell(params: GridRenderCellParams<Track>) {
     // console.log(`Rendering updated cell: ${JSON.stringify(params.row)}`)
     const track = params.row
     const updated = track.updated

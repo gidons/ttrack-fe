@@ -19,12 +19,12 @@ export function ValueSpinner<T>({initialValue, values, onChange}: ValueSpinnerPr
     const currentValue = React.useMemo(() => values[valueIndex], 
         [values, valueIndex])
 
-    const handleIncrement = React.useCallback((e) => {
+    const handleIncrement = React.useCallback(() => {
         setValueIndex(i => Math.min(i + 1, values.length - 1))
         onChange(currentValue)
     }, [setValueIndex, onChange])
     
-    const handleDecrement = React.useCallback((e) => {
+    const handleDecrement = React.useCallback(() => {
         setValueIndex(i => Math.max(i - 1, 0))
         onChange(currentValue)
     }, [setValueIndex])

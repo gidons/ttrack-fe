@@ -1,12 +1,9 @@
-import React from "react";
-import { StereoMix, NULL_STEREO_MIX, MixTrack, isValidMixTrack, Song, fullMixForParts, STD_MIX_TYPES } from "../types";
-import { MixDialogProps } from "./trackDialogs";
-import { createMixPackage, createMixTrack, getDefaultMixesForSong, getMixesForSong, getPartsForSong } from "../data/songs";
-import { Button, Checkbox, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, DialogActions, Link, Typography } from "@mui/material";
+import { Alert, Box, Button, DialogActions, FormControl, Link, Stack, TextField, Typography } from "@mui/material";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import type { TreeViewItemId } from '@mui/x-tree-view/models';
-import StereoMixView from "./StereoMixView";
-import { ValueSpinner } from "./ValueSpinner";
+import React from "react";
+import { createMixPackage, getMixesForSong, getPartsForSong } from "../data/songs";
+import { MixTrack, Song, STD_MIX_TYPES } from "../types";
 import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
 
 export interface BulkMixDialogProps {
@@ -46,6 +43,7 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
             setError(fetchError as Error);
         } finally {
             setIsLoading(false)
+            setIsSubmitting(false)
         }
     }, [song, setIsLoading, setParts, setError, setExistingMixes, setSelectedMixNames]);
 
@@ -54,7 +52,6 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
     React.useEffect(() => { loadData() }, [loadData])
 
     const mixTree = STD_MIX_TYPES.flatMap(type => {
-        const hasChildren = (type != 'Full Mix' && parts.length > 0)
         return [{
             id: type,
             label: type,
@@ -119,6 +116,10 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
         <Stack spacing={1}>
             <Typography variant="h6">Create new mix package for <em>{song?.title??"..."}</em></Typography>
             <Link onClick={onSwitchToSingle}>Switch to Single Mode</Link>
+            {error && (
+                <Box sx={{ flexGrow: 1 }}>
+                    <Alert severity="error">{error.message}</Alert>
+                </Box>)}
             <FormControl fullWidth>
                 <TextField 
                     name='packageDesc'

@@ -1,7 +1,7 @@
+import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField } from "@mui/material";
 import React from "react";
-import { Song } from "../types";
-import { Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField } from "@mui/material";
 import { uploadPartTracks } from "../data/songs";
+import { Song } from "../types";
 
 export interface UploadPartDialogProps {
     song: Song,
@@ -21,6 +21,10 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
     const reset = React.useCallback(() => {
         setRows([{ selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }])
     }, [setRows])
+
+    const loadData = React.useCallback(() => {}, [setIsLoading])
+
+    React.useEffect(() => loadData(), [])
 
     // Handlers for each row
     const handleSelectedPartChange = (rowIdx: number) => (e: SelectChangeEvent<HTMLSelectElement>) => {
@@ -61,17 +65,20 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
         const parts: string[] = rows.map(row => row.isCustomPart ? row.customPartName : row.selectedPartName);
         const files: File[] = rows.map(row => row.audioFile);
         try {
-            const tracks = await uploadPartTracks(song.id, parts, files);
+            await uploadPartTracks(song.id, parts, files);
             onClose(true)
             reset()
         } catch(e) {
             setError(e as Error);
-            throw e;
         }
     }, [song, rows, onClose, reset]);
     
     return (
         <Stack spacing={2}>
+            {error && (
+                <Box sx={{ flexGrow: 1 }}>
+                    <Alert severity="error">{error.message}</Alert>
+                </Box>)}
             {rows.map((row, idx) => (
                 <Grid key={idx} container spacing={2} alignItems="center" sx={{ padding: 1 }}>
                     <Grid size={{ xs: 4, sm: 3 }}>

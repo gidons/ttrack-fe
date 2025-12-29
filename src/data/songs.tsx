@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TrackInfo } from '../types';
-import { M } from 'react-router/dist/development/routeModules-D5iJ6JYT';
 
 // const serverUrl = 'https://shavit-ttrack.azurewebsites.net';
 const serverUrl = 'http://localhost:8080';
@@ -138,7 +137,7 @@ export function getDownloadUrl(path: string) { return serverUrl + path; }
 type ValidationResult = { issues: { path: keyof(Song), message: string }[] }
 
 export function validateSong(song: Partial<Song>) : ValidationResult {
-    let issues: ValidationResult['issues'] = [];
+    const issues: ValidationResult['issues'] = [];
     if (song.title.trim() == "") {
         issues.push({ path: "title", message: "Title cannot be empty" })
     }

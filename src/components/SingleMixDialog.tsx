@@ -1,7 +1,7 @@
+import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { fullMixForParts, MixTrack, NULL_STEREO_MIX, Song, StereoMix } from "../types";
 import { createMixTrack, getDefaultMixesForSong, getMixesForSong, getPartsForSong } from "../data/songs";
-import { Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
+import { fullMixForParts, NULL_STEREO_MIX, Song, StereoMix } from "../types";
 import StereoMixView from "./StereoMixView";
 
 export interface SingleMixDialogProps {
@@ -21,7 +21,6 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     const [existingMixNames, setExistingMixNames] = React.useState(new Set<string>())
     const [currentMix, setCurrentMix] = React.useState<StereoMix>(INITIAL_CUSTOM_MIX);
     const [customTrackName, setCustomTrackName] = React.useState('Custom');
-    const [createdTrack, setCreatedTrack] = React.useState<Partial<MixTrack>>({});
     const [isCustomMix, setIsCustomMix] = React.useState(true);
 
     const reset = React.useCallback(() => {
@@ -30,7 +29,6 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
         setExistingMixNames(new Set())
         setCurrentMix(INITIAL_CUSTOM_MIX)
         setCustomTrackName('Custom')
-        setCreatedTrack({})
         setIsCustomMix(true)
     }, 
     [setDefaultMixes, setExistingMixNames, setCurrentMix, setCustomTrackName, setIsCustomMix])
@@ -114,6 +112,10 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
         <Stack spacing={1}>
             <Typography variant="h6">Create new mix for <em>{song?.title??"..."}</em></Typography>
             <Link onClick={onSwitchToBulk}>Switch to Bulk Mode</Link>
+            {error && (
+                <Box sx={{ flexGrow: 1 }}>
+                    <Alert severity="error">{error.message}</Alert>
+                </Box>)}
             <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', padding: 1 }}>
                 <FormControl fullWidth>
                     <InputLabel id="mix-name-label">Mix</InputLabel>
@@ -128,11 +130,10 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
                         {defaultMixes
                             .filter(m => !existingMixNames.has(m.name))
                             .map(m => 
-                            <MenuItem value={m.name}>{m.name}</MenuItem>
+                            <MenuItem key={`mix-${m.name}`} value={m.name}>{m.name}</MenuItem>
                         )}
                         <MenuItem value="custom">Custom</MenuItem>
                     </Select>
-                    {/* <FormHelperText>{formErrors.key ?? ' '}</FormHelperText> */}
                 </FormControl>
                 <FormControl fullWidth>
                     <TextField 

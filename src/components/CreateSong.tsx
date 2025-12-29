@@ -6,6 +6,7 @@ import SongForm, { type SongFormState } from "./SongForm";
 import { createSong } from "../data/songs"
 import PageContainer from "./PageContainer";
 import { useSongFormManager } from '../hooks/useSongFormManager';
+import { Song } from '../types';
 
 export default function CreateSong() {
     const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function CreateSong() {
         useSongFormManager({
             initialValues: {},
             onSubmit: async (formValues) => {
-                const createdSong = await createSong(formValues as any);
+                const createdSong = await createSong(formValues as Song);
                 setCreatedSongId(createdSong.id);
             },
             onSubmitSuccess: handleSubmitSuccess,
