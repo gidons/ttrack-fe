@@ -229,11 +229,10 @@ export default function ViewSong() {
                 sx={{ width: '100%' }}>
                 <Box flexGrow='1'
                     sx={{ width: '50%' }}>
-                    <UploadPartDialog
-                        open={openDialog == "uploadPart"}
+                    {openDialog == "uploadPart" && <UploadPartDialog
                         song={song}
                         onClose={(success) => { setOpenDialog("")}}
-                        />
+                        />}
                     <TrackList
                         songId={songId}
                         title="Parts"
@@ -251,11 +250,10 @@ export default function ViewSong() {
                     />
                 </Box>
                 <Box flexGrow='1'>
-                    <MixDialog
-                        open={openDialog == "createMix"}
+                    {openDialog == "createMix" && <MixDialog
                         song={song}
                         onClose={(success) => setOpenDialog("")}
-                    />
+                    />}
                     <TrackList
                         songId={songId}
                         title="Mixes"

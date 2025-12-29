@@ -10,13 +10,12 @@ import { ValueSpinner } from "./ValueSpinner";
 import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
 
 export interface BulkMixDialogProps {
-    open: boolean,
     song: Song,
     onSwitchToSingle: () => void,
     onClose: (success: boolean) => void
 }
 
-export function BulkMixDialog({open, song, onSwitchToSingle, onClose } : BulkMixDialogProps) {
+export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialogProps) {
     console.log("BulkMixDialog: start render");
 
     const [isLoading, setIsLoading] = React.useState(false)
@@ -116,7 +115,7 @@ export function BulkMixDialog({open, song, onSwitchToSingle, onClose } : BulkMix
         onClose(true)
     }, [packageDesc, selectedMixNames]);
 
-    return open ? (
+    return (
         <Stack spacing={1}>
             <Typography variant="h6">Create new mix package for <em>{song?.title??"..."}</em></Typography>
             <Link onClick={onSwitchToSingle}>Switch to Single Mode</Link>
@@ -155,13 +154,13 @@ export function BulkMixDialog({open, song, onSwitchToSingle, onClose } : BulkMix
                 </Stack>
             </Stack>
             <DialogActions sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
-                <Button disabled={!open} onClick={handleCancel}>
+                <Button onClick={handleCancel}>
                     Cancel
                 </Button>
                 <Button 
                     variant="contained"
                     color="primary"
-                    disabled={!open || isLoading /* || !isValid()*/} 
+                    disabled={isLoading /* || !isValid()*/} 
                     loading={isSubmitting}
                     onClick={handleSubmit}
                     type="submit">
@@ -169,5 +168,5 @@ export function BulkMixDialog({open, song, onSwitchToSingle, onClose } : BulkMix
                 </Button>
             </DialogActions>
         </Stack>
-    ) : <div/>;
+    );
 }

@@ -4,12 +4,11 @@ import { Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, 
 import { uploadPartTracks } from "../data/songs";
 
 export interface UploadPartDialogProps {
-    open: boolean,
     song: Song,
     onClose: (success: boolean) => void
 }
 
-export function UploadPartDialog({ open, song, onClose } : UploadPartDialogProps) {
+export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
     const defaultParts = ["Bass", "Bari", "Lead", "Tenor"];
     const [error, setError] = React.useState<Error>(null);
     // TODO add loadData() that gets the existing parts
@@ -59,7 +58,6 @@ export function UploadPartDialog({ open, song, onClose } : UploadPartDialogProps
     }, [onClose, reset]);
     
     const handleSubmit = React.useCallback(async () => {
-        // Gather part names and files
         const parts: string[] = rows.map(row => row.isCustomPart ? row.customPartName : row.selectedPartName);
         const files: File[] = rows.map(row => row.audioFile);
         try {
@@ -72,7 +70,7 @@ export function UploadPartDialog({ open, song, onClose } : UploadPartDialogProps
         }
     }, [song, rows, onClose, reset]);
     
-    return open && (
+    return (
         <Stack spacing={2}>
             {rows.map((row, idx) => (
                 <Grid key={idx} container spacing={2} alignItems="center" sx={{ padding: 1 }}>
@@ -124,13 +122,13 @@ export function UploadPartDialog({ open, song, onClose } : UploadPartDialogProps
                 </Grid>
             ))}
             <DialogActions sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
-                <Button disabled={!open} onClick={handleCancel}>
+                <Button onClick={handleCancel}>
                     Cancel
                 </Button>
                 <Button 
                     variant="contained"
                     color="primary"
-                    disabled={!open || isLoading /* || !isValid()*/} 
+                    disabled={isLoading /* || !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">
                     Create

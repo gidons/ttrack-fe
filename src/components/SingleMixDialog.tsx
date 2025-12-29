@@ -5,14 +5,13 @@ import { Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, S
 import StereoMixView from "./StereoMixView";
 
 export interface SingleMixDialogProps {
-    open: boolean,
     song: Song,
     onSwitchToBulk: () => void,
     onClose: (success: boolean) => void
 }
 
-export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMixDialogProps) {
-    console.log(`SingleMixDialog: start render; open=${open}, song=${song?.id}`);
+export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialogProps) {
+    console.log(`SingleMixDialog: start render; song=${song?.id}`);
 
     const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: "custom"};
 
@@ -37,7 +36,7 @@ export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMi
     [setDefaultMixes, setExistingMixNames, setCurrentMix, setCustomTrackName, setIsCustomMix])
 
     const loadData = React.useCallback(async () => {
-        if (!song || !open) { return }
+        if (!song) { return }
         console.log(`Loading dialog data for song ${song.id}`);
         setIsLoading(true)
         try {
@@ -54,7 +53,7 @@ export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMi
         } finally {
             setIsLoading(false)
         }
-    }, [open, song, setDefaultMixes, setError]);
+    }, [song, setDefaultMixes, setError]);
 
     React.useEffect(() => { 
         loadData() 
@@ -111,7 +110,7 @@ export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMi
         }, [song, trackName, currentMix]
     );
 
-    return (open ?
+    return (
         <Stack spacing={1}>
             <Typography variant="h6">Create new mix for <em>{song?.title??"..."}</em></Typography>
             <Link onClick={onSwitchToBulk}>Switch to Bulk Mode</Link>
@@ -147,13 +146,13 @@ export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMi
                 </FormControl>
             </Grid>
             <DialogActions sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
-                <Button disabled={!open} onClick={handleCancel}>
+                <Button onClick={handleCancel}>
                     Cancel
                 </Button>
                 <Button 
                     variant="contained"
                     color="primary"
-                    disabled={!open || isLoading /* || !isValid()*/} 
+                    disabled={isLoading /* || !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">
                     Create
@@ -162,8 +161,7 @@ export function SingleMixDialog({open, song, onSwitchToBulk, onClose} : SingleMi
             {/* Note: each mix view has to have its own key to allow for separate states. */}
             <StereoMixView key={`stereomix-view-${currentMix?.name ?? 'null'}`} mix={currentMix} isEditable={isCustomMix}/>
         </Stack>
-        : <div/> // !open
-    );
+    )
 
 }
 
