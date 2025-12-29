@@ -33,6 +33,7 @@
     "@types/jest": "^29.5.14",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
+    "baseline-browser-mapping": "^2.9.11",
     "typescript": "^4.9.5"
   },
   "eslintConfig": {
@@ -40,6 +41,9 @@
       "react-app",
       "react-app/jest"
     ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "browserslist": {
     "production": [
