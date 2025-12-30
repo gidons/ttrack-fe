@@ -5,7 +5,11 @@ export default function Welcome() {
         <div>
             <h1>Welcome</h1>
 
-            <a href="/songs">Songs</a>
+            Please log in using one of these links:
+            <ul>
+                <li><a href="/.auth/login/github?post_login_redirect_uri=/songs">Login (GitHub)</a></li>
+                <li><a href="/.auth/login/aad?post_login_redirect_uri=/songs">Login (Entra)</a></li>
+            </ul>
         </div>
     )
 }
