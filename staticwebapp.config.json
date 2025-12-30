@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "route": "/songs",
+      "methods": [
+        "get"
+      ],
+      "allowedRoles": [
+        "anonymous"
+      ]
+    }
+  ]
+}
