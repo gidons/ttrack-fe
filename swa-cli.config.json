@@ -1,0 +1,14 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "ttrack-fe": {
+      "appLocation": ".",
+      "outputLocation": "build",
+      "appBuildCommand": "npm run build",
+      "run": "npm start",
+      "appDevserverUrl": "http://localhost:3000",
+      "githubActionWorkflowLocation": "./.github/workflows/azure-static-web-apps-kind-meadow-09b72ab1e.yml",
+      "env": "Production"
+    }
+  }
+}

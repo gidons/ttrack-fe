@@ -48,27 +48,29 @@ const TableToolbar = styled('div')(({ theme }) => ({
 }));
 
 function toUpdatedTime(updated: Date): string {
+    function unitsAgo(count: number, unit: string) {
+        return `${count} ${unit}${count > 1 ? "s" : ""} ago`
+    }
     const secAgo = Math.trunc((new Date().getTime() - updated.getTime()) / 1000)
     if (secAgo < 2) {
         return "Just now"
     }
     if (secAgo < 60) {
-        return `${secAgo} seconds ago`
+        return unitsAgo(secAgo, "second")
     }
     const minAgo = Math.trunc(secAgo / 60)
     if (minAgo < 60) {
-        return `${minAgo} minute(s) ago`
+        return unitsAgo(minAgo, "minute")
     }
     const hoursAgo = Math.trunc(minAgo / 60);
     if (hoursAgo < 24) {
-        return `${hoursAgo} hour(s) ago`
+        return unitsAgo(hoursAgo, "hour")
     }
     const daysAgo = Math.trunc(hoursAgo / 24);
     if (daysAgo < 3) {
-        return `$daysAgo day(s) ago`
+        return unitsAgo(daysAgo, "day")
     }
     return updated.toLocaleDateString()
-
 }
 
 function renderUpdatedCell(params: GridRenderCellParams<Track>) {
