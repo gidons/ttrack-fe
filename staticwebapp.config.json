@@ -7,10 +7,6 @@
     {
       "route": "/songs*",
       "allowedRoles": ["authenticated"]
-    },
-    {
-      "route": "/songs/*",
-      "allowedRoles": ["authenticated"]
     }
   ],
   "responseOverrides": {
