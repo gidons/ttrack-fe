@@ -13,7 +13,7 @@ export interface BulkMixDialogProps {
 }
 
 export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialogProps) {
-    console.log("BulkMixDialog: start render");
+    // console.log("BulkMixDialog: start render");
 
     const [isLoading, setIsLoading] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -28,16 +28,13 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
     const loadData = React.useCallback(async () => {
         setIsLoading(true)
         try {
-            console.log(`Loading dialog data for song ${song.id}`);
+            // console.log(`Loading dialog data for song ${song.id}`);
             const partNames = (await getPartsForSong(song.id)).map(pt => pt.part);
-            console.log(`partNames: ${partNames.join(",")}`)
             setParts(partNames)
             const fetchedMixes = await getMixesForSong(song.id);
             setExistingMixes(fetchedMixes);
-            console.log(`Existing mix names: ${fetchedMixes.map(m => m.mix.name).join(",")}`);
             const fetchedNames = fetchedMixes.map(m => m.mix.name);
             const selectedNames = [...(new Set<string>([...selectedMixNames, ...fetchedNames]))];
-            console.log(`Selected mix names: ${selectedNames.join(",")}`);
             setSelectedMixNames(selectedNames)
         } catch (fetchError) {
             setError(fetchError as Error);
@@ -104,7 +101,7 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
     }, [setPackageDesc]);
 
     const handleSubmit = React.useCallback(async () => {
-        console.log(`handleSubmit: packageDesc=${packageDesc}; selectedMixNames=${JSON.stringify(selectedMixNames)}`);
+        // console.log(`handleSubmit: packageDesc=${packageDesc}; selectedMixNames=${JSON.stringify(selectedMixNames)}`);
         const mixesToCreate = selectedMixNames.filter(n => !parentNodeNames.includes(n) && !existingMixNames.includes(n))
         console.log(`Mixes to create: ${mixesToCreate.join(",")}`)
         // TODO handle errors

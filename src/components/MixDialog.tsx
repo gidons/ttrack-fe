@@ -9,8 +9,6 @@ export interface MixDialogProps {
 }
 
 export function MixDialog({song, onClose}: MixDialogProps) {
-    console.log("MixDialog: start render");
-
     const [bulkMode, setBulkMode] = React.useState(false)
 
     return bulkMode ? <BulkMixDialog song={song} onClose={onClose} onSwitchToSingle={() => setBulkMode(false)}/>

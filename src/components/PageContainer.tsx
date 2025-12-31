@@ -106,7 +106,6 @@ export default function PageContainer(props: PageContainerProps) {
                   })
                 : null}
             </PageHeaderBreadcrumbs>
-            {/* Account display to the right of breadcrumbs */}
             <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
               <AccountCircleIcon color="action" />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>

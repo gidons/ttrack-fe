@@ -74,7 +74,6 @@ function toUpdatedTime(updated: Date): string {
 }
 
 function renderUpdatedCell(params: GridRenderCellParams<Track>) {
-    // console.log(`Rendering updated cell: ${JSON.stringify(params.row)}`)
     const track = params.row
     const updated = track.updated
     const isUpdating = isTrackUpdating(track)

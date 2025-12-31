@@ -42,14 +42,12 @@ export function SongList() {
         { field: 'shortTitle', headerName: 'Short Title', width: 150 },
         { field: 'arranger', headerName: 'Arranger', width: 150 },
         { field: 'key', headerName: 'Key', width: 80 },
-        // { field: 'durationSec', headerName: 'Duration', type: 'number', width: 80, valueFormatter: secondsToHMS },
         {
             field: 'actions',
             type: 'actions',
             flex: 1,
             align: 'right',
             getActions: ({row}: GridRowParams) => {
-                console.log(`getActions param: ${row.title}`)
                 return [
                 <GridActionsCellItem
                     key="edit-item"

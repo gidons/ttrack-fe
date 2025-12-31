@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TrackInfo } from '../types';
 
-// const serverUrl = 'https://shavit-ttrack.azurewebsites.net';
-const serverUrl = 'http://localhost:8080';
+const serverUrl = import.meta.env.VITE_BACKEND_URL
 const client = axios.create({ baseURL: serverUrl })
 
 type StereoMixDTO = Omit<StereoMix, 'spec'> & { mix: StereoMixSpec };
