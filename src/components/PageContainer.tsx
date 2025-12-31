@@ -9,7 +9,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import NavigateNextRoundedIcon from '@mui/icons-material/NavigateNextRounded';
 import { Link } from 'react-router';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import { dark } from '@clerk/themes';
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 
 const PageContentHeader = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -50,12 +51,12 @@ export interface PageContainerProps extends ContainerProps {
 
 export default function PageContainer(props: PageContainerProps) {
   const { children, breadcrumbs, title, actions = null } = props;
-  const [ userPrincipal, setUserPrincipal ] = React.useState<UserPrincipal | null>(null);
+  // const [ userPrincipal, setUserPrincipal ] = React.useState<UserPrincipal | null>(null);
 
   interface UserPrincipal {
     userDetails: string
   }
-
+/*
   React.useEffect(() => {
     (async () => {
       try {
@@ -71,7 +72,7 @@ export default function PageContainer(props: PageContainerProps) {
       }
     })();
   }, [setUserPrincipal]);
-
+*/
   return (
     <Container sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Stack sx={{ flex: 1, my: 2 }} spacing={2}>
@@ -106,15 +107,8 @@ export default function PageContainer(props: PageContainerProps) {
                   })
                 : null}
             </PageHeaderBreadcrumbs>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
-              <AccountCircleIcon color="action" />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {userPrincipal?.userDetails ?? "Guest"}
-              </Typography>
-              <MuiLink href="/logout" underline='always' color="inherit">
-                Log out
-              </MuiLink>
-            </Stack>
+            <SignedOut><SignInButton/></SignedOut>
+            <SignedIn><UserButton showName={true} appearance={{theme: dark}}/></SignedIn>
           </Stack>
           <PageContentHeader>
             {title ? <Typography variant="h4">{title}</Typography> : null}
