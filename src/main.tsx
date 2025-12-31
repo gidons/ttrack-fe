@@ -10,10 +10,9 @@ import NotificationsProvider from './hooks/useNotifications/NotificationsProvide
 import ViewSong from './components/ViewSong';
 import DialogsProvider from './hooks/useDialogs/DialogsProvider';
 import AppTheme from './theme/AppTheme';
-import { getSong } from './data/songs';
 import Welcome from './Welcome';
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <DialogsProvider><NotificationsProvider><AppTheme>

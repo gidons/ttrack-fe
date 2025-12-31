@@ -5,10 +5,10 @@
       "appLocation": ".",
       "outputLocation": "build",
       "appBuildCommand": "npm run build",
-      "run": "npm start",
-      "appDevserverUrl": "http://localhost:3000",
+      "run": "npm run dev",
+      "appDevserverUrl": "http://localhost:5173",
       "githubActionWorkflowLocation": "./.github/workflows/azure-static-web-apps-kind-meadow-09b72ab1e.yml",
-      "env": "Production"
+      "env": "production"
     }
   }
 }
