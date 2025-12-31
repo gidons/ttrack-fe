@@ -4,6 +4,8 @@
 		"exclude": ["/api/*", "/static/*"]
 	},
   "routes": [
+    {"route":"/login", "redirect": "/.auth/github/login"},
+    {"route":"/logout", "redirect": "/.auth/logout"},
     {
       "route": "/songs*",
       "allowedRoles": ["authenticated"]

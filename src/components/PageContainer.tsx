@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import NavigateNextRoundedIcon from '@mui/icons-material/NavigateNextRounded';
 import { Link } from 'react-router';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const PageContentHeader = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -49,38 +50,73 @@ export interface PageContainerProps extends ContainerProps {
 
 export default function PageContainer(props: PageContainerProps) {
   const { children, breadcrumbs, title, actions = null } = props;
+  const [ userPrincipal, setUserPrincipal ] = React.useState<UserPrincipal | null>(null);
+
+  interface UserPrincipal {
+    userDetails: string
+  }
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/.auth/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        console.log(`Auth data: ${JSON.stringify(data)}`)
+        const principal = data.clientPrincipal
+        setUserPrincipal(principal)
+      } catch (err) {
+        console.log(`Error while getting auth data: ${err}`)
+        void err;
+      }
+    })();
+  }, [setUserPrincipal]);
 
   return (
     <Container sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Stack sx={{ flex: 1, my: 2 }} spacing={2}>
         <Stack>
-          <PageHeaderBreadcrumbs
-            aria-label="breadcrumb"
-            separator={<NavigateNextRoundedIcon fontSize="small" />}
-          >
-            {breadcrumbs
-              ? breadcrumbs.map((breadcrumb, index) => {
-                  return breadcrumb.path ? (
-                    <MuiLink
-                      key={index}
-                      component={Link}
-                      underline="hover"
-                      color="inherit"
-                      to={breadcrumb.path}
-                    >
-                      {breadcrumb.title}
-                    </MuiLink>
-                  ) : (
-                    <Typography
-                      key={index}
-                      sx={{ color: 'text.primary', fontWeight: 600 }}
-                    >
-                      {breadcrumb.title}
-                    </Typography>
-                  );
-                })
-              : null}
-          </PageHeaderBreadcrumbs>
+          <Stack
+            direction={'row'}
+            sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
+            <PageHeaderBreadcrumbs
+              aria-label="breadcrumb"
+              separator={<NavigateNextRoundedIcon fontSize="small" />}
+            >
+              {breadcrumbs
+                ? breadcrumbs.map((breadcrumb, index) => {
+                    return breadcrumb.path ? (
+                      <MuiLink
+                        key={index}
+                        component={Link}
+                        underline="hover"
+                        color="inherit"
+                        to={breadcrumb.path}
+                      >
+                        {breadcrumb.title}
+                      </MuiLink>
+                    ) : (
+                      <Typography
+                        key={index}
+                        sx={{ color: 'text.primary', fontWeight: 600 }}
+                      >
+                        {breadcrumb.title}
+                      </Typography>
+                    );
+                  })
+                : null}
+            </PageHeaderBreadcrumbs>
+            {/* Account display to the right of breadcrumbs */}
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
+              <AccountCircleIcon color="action" />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {userPrincipal?.userDetails ?? "Guest"}
+              </Typography>
+              <MuiLink href="/logout" underline='always' color="inherit">
+                Log out
+              </MuiLink>
+            </Stack>
+          </Stack>
           <PageContentHeader>
             {title ? <Typography variant="h4">{title}</Typography> : null}
             <PageHeaderToolbar>{actions}</PageHeaderToolbar>
