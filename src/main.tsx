@@ -13,6 +13,10 @@ import AppTheme from './theme/AppTheme';
 import Welcome from './Welcome';
 import { ClerkProvider, Protect, RedirectToSignIn } from '@clerk/react-router';
 import { dark } from '@clerk/themes';
+import PageContainer from './components/PageContainer';
+import MainLayout from './components/MainLayout';
+import ProtectedContent from './components/ProtectedContent';
+import { SongList } from './components/SongList';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -27,13 +31,17 @@ root.render(
       <BrowserRouter>
         <ClerkProvider publishableKey={PUBLISHABLE_KEY} appearance={{theme: dark}}>
           <Routes>
-            <Route path="/" element={<Welcome/>}/>
-            <Route path="/songs" element={<Protect fallback={<RedirectToSignIn/>}><App/></Protect>}/>
-            <Route path="/songs/new" element={<CreateSong/>}/>
-            <Route path="/songs/:songId" element={<ViewSong/>}/>
-            <Route path="/songs/:songId/edit" element={<EditSong/>}/>
-            <Route path="/songs/:songId/part/:part" element={<ViewSong/>}/>
-            <Route path="/songs/:songId/mix/:mixName" element={<ViewSong/>}/>
+            <Route path="/" element={<MainLayout/>}>
+              <Route index element={<Welcome/>}/>
+              <Route path="songs" element={<ProtectedContent/>}>
+                <Route index element={<SongList/>}/>
+                <Route path="new" element={<CreateSong/>}/>
+                <Route path=":songId" element={<ViewSong/>}/>
+                <Route path=":songId/edit" element={<EditSong/>}/>
+                <Route path=":songId/part/:part" element={<ViewSong/>}/>
+                <Route path=":songId/mix/:mixName" element={<ViewSong/>}/>
+                </Route>
+            </Route>
           </Routes>
         </ClerkProvider>
       </BrowserRouter>
