@@ -26,6 +26,11 @@ import PageContainer from './PageContainer';
 import StereoMixView from './StereoMixView';
 import { TrackList } from './TrackList';
 import { UploadPartDialog } from './UploadPartDialog';
+import { IconButton, Tooltip } from '@mui/material';
+import { Download as DownloadIcon, FolderZip as FolderZipIcon } from '@mui/icons-material';
+import { download } from './utils';
+import DownloadZipButton from './DownloadZipButton';
+
 
 type DialogName = "createMix" | "uploadPart" | "";
 
@@ -116,6 +121,9 @@ export default function ViewSong() {
         console.log("Setting selected track to: " + JSON.stringify(track));
         setSelectedTrack(track);
     }, [setSelectedTrack]);
+
+    const handleDownloadAllMixes = React.useCallback(() => {
+    }, [song])
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -239,7 +247,14 @@ export default function ViewSong() {
                         canDelete={(track: Track) => false}
                         onFoundSelected={handleFoundSelected}
                         playButtonPath={`/songs/${songId}/part/{id}`}
-                        onAdd={() => setOpenDialog("uploadPart")} 
+                        onAdd={() => setOpenDialog("uploadPart")}
+                        downloadAll={
+                            <Tooltip title="Download all-part WAV">
+                                <IconButton size="small" onClick={() => download(song.allPartsMediaUrl)}>
+                                    <DownloadIcon/>
+                                </IconButton>
+                            </Tooltip>
+                        }
                     />
                 </Box>
                 <Box flexGrow='1'>
@@ -259,7 +274,12 @@ export default function ViewSong() {
                         onFoundSelected={handleFoundSelected}
                         canDelete={(track: Track) => track.trackId != 'All'}
                         playButtonPath={`/songs/${songId}/mix/{id}`}
-                        onAdd={() => setOpenDialog("createMix")} 
+                        onAdd={() => setOpenDialog("createMix")}
+                        downloadAll={
+                            <DownloadZipButton 
+                                songId={songId}
+                                hoverTitle='Download a zip file with all mixes'
+                            />}
                     />
                 </Box>
             </Stack>

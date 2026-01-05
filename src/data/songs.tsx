@@ -16,7 +16,8 @@ export async function getAllSongs() : Promise<Song[]> {
 
 export async function getSong(songId: string) : Promise<Song> {
     const response = await client.get(`/songs/${songId}`);
-    return response.data;
+    // TODO add the all-parts URL on the server.
+    return { ...response.data, allPartsMediaUrl: getDownloadUrl(`/songs/${songId}/mixes/All/media`) };
 }
 
 export async function createSong(song: Song) : Promise<Song> {
@@ -127,6 +128,12 @@ export async function createMixPackage(
 export async function deleteTrack(trackUrl: string) {
     console.log(`Deleting track with URL: ${trackUrl}`)
     client.delete(trackUrl)
+}
+
+export async function submitZipMixesRequest(songId: string): Promise<string> {
+    console.log(`Submitting request to zip mixes for ${songId}`)
+    const response = await client.post(`/songs/${songId}/zip`)
+    return response.data as string // task ID
 }
 
 export function getDownloadUrl(path: string) { return serverUrl + path; }

@@ -12,6 +12,7 @@ import { isTrackUpdating, secondsToHMS, Track } from '../types';
 import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
+import { download } from './utils';
 
 /**
  * This component is intended to be included in the song page, not to be an independent page.
@@ -30,6 +31,7 @@ interface TrackListProps {
     playButtonPath: string;
     // Add action: either a callback or a path to go to
     onAdd?: () => void;
+    downloadAll: JSX.Element;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -96,6 +98,7 @@ export function TrackList({
     playButtonPath,
     canDelete,
     onAdd,
+    downloadAll
 }: TrackListProps) {
 
     const [isLoading, setIsLoading] = React.useState(true);
@@ -107,15 +110,7 @@ export function TrackList({
     const idProp = 'trackId';
 
     const handleDownload = React.useCallback((row) => () => {
-        if (!row.mediaUrl) {
-            return;
-        }
-        const link = document.createElement('a');
-        link.href = getDownloadUrl(row.mediaUrl);
-        link.download = "";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        download(row.mediaUrl)
     }, []);
     
     const handleRowDelete = React.useCallback((row: Track) => async() => {
@@ -235,13 +230,15 @@ export function TrackList({
                             </IconButton>
                         </div>
                     </Tooltip>
-                { onAdd ? (
-                        <Button 
-                            startIcon={<AddIcon/>}
-                            onClick={handleAdd}
-                        >Add</Button>
-                    ) : (<div/>) 
-                }
+                    { downloadAll }
+                    { onAdd ? (
+                            <Button 
+                                startIcon={<AddIcon/>}
+                                onClick={handleAdd}>
+                                    Add
+                            </Button>
+                        ) : (<div/>) 
+                    }
                 </TableToolbar>
             </TableHeader>
             <Box sx={{ flex: 1, width: '100%' }}>

@@ -5,6 +5,7 @@ export interface Song {
   arranger?: string;
   key?: string;
   durationSec?: number;
+  allPartsMediaUrl?: string;
 }
 
 export interface StereoMixSpec {
