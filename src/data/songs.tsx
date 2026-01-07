@@ -29,6 +29,7 @@ export async function updateSong(song: Partial<Song>) : Promise<Song> {
     if (!verifyIsSong(song)) {
         throw new Error("Missing data in song object: " + JSON.stringify(song));
     }
+    console.log(`Putting song: ${JSON.stringify(song)}`)
     const response = await client.put(`/songs/${song.id}`, song);
     return response.data
 }
@@ -144,7 +145,7 @@ type ValidationResult = { issues: { path: keyof(Song), message: string }[] }
 
 export function validateSong(song: Partial<Song>) : ValidationResult {
     const issues: ValidationResult['issues'] = [];
-    if (song.title.trim() == "") {
+    if (song.title?.trim() == "") {
         issues.push({ path: "title", message: "Title cannot be empty" })
     }
     return { issues: issues }

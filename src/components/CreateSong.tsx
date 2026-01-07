@@ -1,34 +1,21 @@
-import * as React from 'react';
 import Box from '@mui/material/Box';
+import * as React from 'react';
 import { useNavigate } from 'react-router';
 
-import SongForm, { type SongFormState } from "./SongForm";
-import { createSong } from "../data/songs"
-import PageContainer from "./PageContainer";
-import { useSongFormManager } from '../hooks/useSongFormManager';
+import { createSong } from "../data/songs";
 import { Song } from '../types';
+import PageContainer from "./PageContainer";
+import SongForm from './SongForm';
 
 export default function CreateSong() {
     const navigate = useNavigate();
-    const [createdSongId, setCreatedSongId] = React.useState<string | null>(null);
 
-    const handleSubmitSuccess = React.useCallback(() => {
-        if (createdSongId) {
-            navigate(`/songs/${createdSongId}`);
+    const handleSubmit = React.useCallback(async (formValues: Partial<Song>) => {
+        const createdSong = await createSong(formValues as Song);
+        if (createdSong.id) {
+            navigate(`/songs/${createdSong.id}`);
         }
-    }, [createdSongId, navigate]);
-
-    const { formState, handleFormFieldChange, handleFormReset, handleFormSubmit } = 
-        useSongFormManager({
-            initialValues: {},
-            onSubmit: async (formValues) => {
-                const createdSong = await createSong(formValues as Song);
-                setCreatedSongId(createdSong.id);
-            },
-            onSubmitSuccess: handleSubmitSuccess,
-            successMessage: 'Song created successfully.',
-            errorMessagePrefix: 'Failed to create song',
-        });
+    }, [navigate]);
 
     return(
         <PageContainer
@@ -37,10 +24,8 @@ export default function CreateSong() {
         >
             <Box sx={{ flex: 1, width: '100%' }}>
                 <SongForm
-                    formState={formState}
-                    onFieldChange={handleFormFieldChange}
-                    onSubmit={handleFormSubmit}
-                    onReset={handleFormReset}
+                    initialValues={{}}
+                    onSubmit={handleSubmit}
                     submitButtonLabel="Create"
                     backButtonPath="/songs"
                 />

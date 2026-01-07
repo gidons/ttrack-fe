@@ -36,6 +36,7 @@ Appearance
 - Add header/footer
 - Add themes?
 - Break key down to A-G dropdown, #/b/m checkboxes
+- Instead of a separate EditSong page, show the edit form in-place in the ViewSong page.
 
 Testing
 =======

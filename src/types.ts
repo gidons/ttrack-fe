@@ -4,8 +4,10 @@ export interface Song {
   shortTitle?: string;
   arranger?: string;
   key?: string;
+  voicing?: string;
   durationSec?: number;
   allPartsMediaUrl?: string;
+  eTag?: string;
 }
 
 export interface StereoMixSpec {
@@ -28,6 +30,22 @@ export const NULL_STEREO_MIX: StereoMix = {
   pitchShift: 0,
   speedFactor: 1
 }
+
+export interface Voicing {
+  name: string;
+  displayName: string;
+  parts: string[];
+}
+
+export const STD_VOICING_LIST: Array<Voicing> = [
+  { name: "BB", displayName: "TLBB", parts: ["Tenor", "Lead", "Bari", "Bass"] },
+  { name: "TTBB", displayName: "TTBB", parts: ["Tenor1", "Tenor2", "Bari", "Bass"] },
+  { name: "SSAA", displayName: "SSAA", parts: ["Tenor", "Lead", "Bari", "Bass"] },
+  { name: "SATB", displayName: "SATB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2"] },
+  { name: "SSAATTBB", displayName: "SSAATTBB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2", "Tenor1", "Tenor2", "Bari", "Bass"] },
+  { name: "CUSTOM", displayName: "Custom", parts: [] }
+]
+export const STD_VOICINGS = Object.fromEntries(STD_VOICING_LIST.map(v => [v.name, v]))
 
 export const STD_MIX_TYPES = ["Full Mix", "Solo", "Dominant", "Left", "Missing"]
 

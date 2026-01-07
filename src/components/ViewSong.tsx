@@ -16,11 +16,12 @@ import {
     getDownloadUrl,
     getMixesForSong,
     getPartsForSong,
-    getSong
+    getSong,
+    updateSong
 } from '../data/songs';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { stereoMix, trackName, type Song, type Track } from '../types';
+import { STD_VOICING_LIST, STD_VOICINGS, stereoMix, trackName, type Song, type Track } from '../types';
 import { MixDialog } from './MixDialog';
 import PageContainer from './PageContainer';
 import StereoMixView from './StereoMixView';
@@ -30,16 +31,15 @@ import { IconButton, Tooltip } from '@mui/material';
 import { Download as DownloadIcon, FolderZip as FolderZipIcon } from '@mui/icons-material';
 import { download } from './utils';
 import DownloadZipButton from './DownloadZipButton';
+import StandardForm from './StandardForm';
 
 
 type DialogName = "createMix" | "uploadPart" | "";
 
 export default function ViewSong() {
 
-    console.log("ViewSong: start render");
-
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
-    console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
+    // console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
     const navigate = useNavigate();
 
     const dialogs = useDialogs();
@@ -50,6 +50,7 @@ export default function ViewSong() {
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
     const [openDialog, setOpenDialog] = React.useState<DialogName>("");
+    const [isEditingSong, setIsEditingSong] = React.useState(false);
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -70,8 +71,10 @@ export default function ViewSong() {
     }, [loadData]);
 
     const handleSongEdit = React.useCallback(() => {
-        navigate(`/songs/${songId}/edit`);
-    }, [navigate, songId]);
+        // navigate(`/songs/${songId}/edit`);
+        console.log(`handleSongEdit`)
+        setIsEditingSong(true);
+    }, [setIsEditingSong]);
 
     const handleSongDelete = React.useCallback(async () => {
         if (!song) {
@@ -117,13 +120,15 @@ export default function ViewSong() {
         navigate('/songs');
     }, [navigate]);
 
+    const handleEditSubmit = React.useCallback(async (formValues) => {
+        setSong(await updateSong({ ...formValues, id: songId, eTag: song.eTag }));
+        setIsEditingSong(false)
+    }, [song, setSong, setIsEditingSong])
+    
     const handleFoundSelected = React.useCallback((track: Track) => {
         console.log("Setting selected track to: " + JSON.stringify(track));
         setSelectedTrack(track);
     }, [setSelectedTrack]);
-
-    const handleDownloadAllMixes = React.useCallback(() => {
-    }, [song])
 
     const renderView = React.useMemo(() => {
         if (isLoading) {
@@ -151,13 +156,13 @@ export default function ViewSong() {
             );
         }
 
-        function makeDisplayField(title: string, value: string) {
+        function makeDisplayField(title: string, value: string, smSize: number = 6) {
             return (
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid size={{ xs: 12, sm: smSize }}>
                     <Paper sx={{ px: 2, py: 1 }}>
                         <Typography variant="overline">{title}</Typography>
                         <Typography variant="body1" sx={{ mb: 1 }}>
-                            {value}
+                            {value}&nbsp;
                         </Typography>
                     </Paper>
                 </Grid>
@@ -165,14 +170,30 @@ export default function ViewSong() {
         }
 
         return song ? (
-            <Box sx={{ flexGrow: 1, width: '100%' }}>
-                <Grid container spacing={2} sx={{ width: '100%' }}>
-                    {makeDisplayField("Title", song.title)}
-                    {makeDisplayField("Short Title", song.shortTitle)}
-                    {makeDisplayField("Arranger", song.arranger)}
-                    {makeDisplayField("Key", song.key)}
-                </Grid>
-                <Divider sx={{ my: 3 }} />
+            <StandardForm<Song>
+                initialValues={song}
+                submitButtonLabel='Save'
+                cancelButtonLabel='Cancel'
+                onSubmit={handleEditSubmit}
+                onCancel={() => { setIsEditingSong(false) }}
+                validate={(song: Partial<Song>) => { return {} }}
+                editable={isEditingSong}
+                fields={[
+                    {name: "title", displayName: "Title", smSize: 6},
+                    {name: "shortTitle", displayName: "Short Title", smSize: 6},
+                    {name: "arranger", displayName: "Arranger", smSize: 4},
+                    {name: "key", displayName: "Key", smSize: 4, options: {
+                        A: "A", 
+                        Bb: "B♭",
+                        B: "B",
+                        C: "C",
+                        "C#": "C♯" 
+                    }},
+                    {name: "voicing", displayName: "Voicing", smSize: 4, options: 
+                        Object.fromEntries(STD_VOICING_LIST.map(v => ([v.name, v.displayName])))
+                    }
+                ]}
+                actionButtons={(
                 <Stack direction="row" spacing={2} justifyContent="space-between">
                     <Button
                         variant="contained"
@@ -198,13 +219,14 @@ export default function ViewSong() {
                             Delete
                         </Button>
                     </Stack>
-                </Stack>
-            </Box>
+                </Stack>)}
+            />
         ) : null;
     }, [
         isLoading,
         error,
         song,
+        isEditingSong,
         handleBack,
         handleSongEdit,
         handleSongDelete,

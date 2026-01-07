@@ -4,7 +4,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from "react-router";
 import CreateSong from './components/CreateSong';
-import EditSong from './components/EditSong';
 import MainLayout from './components/MainLayout';
 import ProtectedContent from './components/ProtectedContent';
 import { SongList } from './components/SongList';
@@ -35,7 +34,6 @@ root.render(
                 <Route index element={<SongList/>}/>
                 <Route path="new" element={<CreateSong/>}/>
                 <Route path=":songId" element={<ViewSong/>}/>
-                <Route path=":songId/edit" element={<EditSong/>}/>
                 <Route path=":songId/part/:part" element={<ViewSong/>}/>
                 <Route path=":songId/mix/:mixName" element={<ViewSong/>}/>
               </Route>

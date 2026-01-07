@@ -16,3 +16,7 @@ export async function sleep(ms: number) {
     setTimeout(resolve, ms);
   });
 }
+
+export function isEmpty(obj: object) {
+  return Object.keys(obj).length === 0
+}

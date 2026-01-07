@@ -45,6 +45,5 @@ export default function DownloadZipButton({songId, hoverTitle}: DownloadZipButto
                 {icon}
             </IconButton>
         </Tooltip>
-        
     )
 }

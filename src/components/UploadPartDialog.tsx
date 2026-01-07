@@ -1,7 +1,7 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField } from "@mui/material";
 import React from "react";
 import { uploadPartTracks } from "../data/songs";
-import { Song } from "../types";
+import { Song, STD_VOICING_LIST } from "../types";
 
 export interface UploadPartDialogProps {
     song: Song,
@@ -9,7 +9,9 @@ export interface UploadPartDialogProps {
 }
 
 export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
-    const defaultParts = ["Bass", "Bari", "Lead", "Tenor"];
+    const defaultParts = React.useMemo(() =>
+        STD_VOICING_LIST.find(v => v.name == song.voicing)?.parts || []
+    , [song]);
     const [error, setError] = React.useState<Error>(null);
     // TODO add loadData() that gets the existing parts
     const [isLoading, setIsLoading] = React.useState(false);
@@ -73,6 +75,8 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
         }
     }, [song, rows, onClose, reset]);
     
+    console.log(`Default parts: ${JSON.stringify(defaultParts)}`)
+
     return (
         <Stack spacing={2}>
             {error && (

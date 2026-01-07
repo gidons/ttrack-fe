@@ -1,6 +1,7 @@
-import React, { ChangeEvent, FormEvent, useState } from 'react'
-import { Song } from '../types';
+import React from 'react';
+import { Song, STD_VOICING_LIST } from '../types';
 
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
@@ -9,86 +10,49 @@ import FormHelperText from '@mui/material/FormHelperText';
 import Grid from '@mui/material/Grid';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
-import Select, { SelectChangeEvent, SelectProps } from '@mui/material/Select';
+import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router';
-
-export interface SongFormState {
-    values: Partial<Omit<Song, 'id'>>;
-    errors: Partial<Record<keyof SongFormState['values'], string>>;
-}
-
-/*
- * TODO genericize this whole pattern so it can be used in other forms:
- * - Type parameter T: has 'values'
- * - FormFieldValue
- * - SimpleFormProps<T>, FormState<T>
- * - SimpleForm<T>
- *   - change handlers
- *   - submit/reset handlers
- * ?
- */
-
-export type FormFieldValue = string | string[] | number | boolean | File | null;
+import { verifyIsSongExceptId } from '../data/songs';
 
 export interface SongFormProps {
-    formState: SongFormState;
-    onFieldChange: (
-        name: keyof SongFormState['values'],
-        value: FormFieldValue,
-    ) => void;
-    onSubmit: (formValues: Partial<SongFormState['values']>) => Promise<void>;
-    onReset?: (formValues: Partial<SongFormState['values']>) => void;
+    initialValues: Partial<Song>;
+    onSubmit: (formValues: Partial<Song>) => Promise<void>;
+    onReset?: (formValues: Partial<Song>) => void;
     submitButtonLabel: string;
     backButtonPath?: string;
 }
 
 export default function SongForm(props: SongFormProps) {
     const {
-        formState,
-        onFieldChange,
+        initialValues,
         onSubmit,
         onReset,
         submitButtonLabel,
         backButtonPath
     } = props;
 
-    const formValues = formState.values;
-    const formErrors = formState.errors;
+    const textValue = (v: string) => v
+    const numberValue = (v: string) => Number(v)
 
     const navigate = useNavigate();
 
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [formValues, setFormValues] = React.useState<Partial<Song>>(initialValues)
+    const [formErrors, setFormErrors] = React.useState<Partial<Record<keyof Song, string>>>({})
 
-    const handleTextFieldChange = React.useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            onFieldChange(
-                e.target.name as keyof SongFormState['values'],
-                e.target.value
-            )
-        }, [onFieldChange]
+    type MyEvent = { target: { name: string, value: unknown } }
+
+    const handleFieldChange = React.useCallback(
+        (e: MyEvent, converter: (text: string) => unknown) => {
+            const value = converter(e.target.value as string)
+            setFormValues((old: Partial<Song>) => ({ ...old, [e.target.name]: value }))
+        }, [setFormValues]
     );
+
+    const handleFieldChangeFor = (converter: (text: string) => unknown) => (e: MyEvent) => handleFieldChange(e, converter);
     
-    const handleNumberFieldChange = React.useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            onFieldChange(
-                e.target.name as keyof SongFormState['values'],
-                Number(e.target.value)
-            )
-        }, [onFieldChange]
-    );
-
-    const handleSelectFieldChange = React.useCallback(
-        (e: SelectChangeEvent<HTMLSelectElement>) => {
-            onFieldChange(
-                e.target.name as keyof SongFormState['values'],
-                e.target.value.toString()
-            )
-        }, [onFieldChange]
-    )
-
     const handleSubmit = React.useCallback(
         async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
@@ -113,12 +77,12 @@ export default function SongForm(props: SongFormProps) {
         navigate(backButtonPath ?? '/songs');
     }, [navigate, backButtonPath]);
 
-    function makeTextField(property: string, name: string, label: string) {
+    function makeTextField(property: string, name: string, label: string, smSize: number) {
         return (
-            <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
+            <Grid size={{ xs: 12, sm: smSize }} sx={{ display: 'flex' }}>
                 <TextField
                     value={formValues[property] ?? ''}
-                    onChange={handleTextFieldChange}
+                    onChange={handleFieldChangeFor(textValue)}
                     name={name}
                     label={label}
                     error={!!formErrors[name]}
@@ -129,54 +93,54 @@ export default function SongForm(props: SongFormProps) {
         );
     }
 
-  return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      noValidate
-      autoComplete="off"
-      onReset={handleReset}
-      sx={{ width: '100%' }}
-    >
+    function makeDropdownField(property: string, name: string, label: string, smSize: number, options: object) {
+        return (
+            <Grid size={{ xs: 12, sm: smSize }} sx={{ display: 'flex' }}>
+                <FormControl error={!!formErrors[property]} fullWidth>
+                    <InputLabel id="song-voicing-label">{label}</InputLabel>
+                    <Select
+                        value={formValues[property] ?? ''}
+                        onChange={handleFieldChangeFor(textValue)}
+                        labelId={`song-${name}-label`}
+                        name={name}
+                        label={label}
+                        defaultValue=""
+                        fullWidth
+                    >{
+                        Object.keys(options).map(k =>  
+                            <MenuItem key={`${name}-${k}`} value={k}>{options[k]}</MenuItem>
+                        )
+                    }
+                    </Select>
+                    <FormHelperText>{formErrors.voicing ?? ' '}</FormHelperText>
+                </FormControl>
+            </Grid>
+        )
+    }
+
+    return (
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        noValidate
+        autoComplete="off"
+        onReset={handleReset}
+        sx={{ width: '100%' }}
+      >
         <FormGroup>
             <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
-                {makeTextField('title', 'title', 'Title')}
-                {makeTextField('shortTitle', 'shortTitle', 'Short Title')}
-                {makeTextField('arranger', 'arranger', 'Arranger')}
-                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                    <FormControl error={!!formErrors.key} fullWidth>
-                        <InputLabel id="song-key-label">Key</InputLabel>
-                        <Select
-                            value={formValues.key ?? ''}
-                            onChange={handleSelectFieldChange as SelectProps['onChange']}
-                            labelId="song-key-label"
-                            name="key"
-                            label="Key"
-                            defaultValue=""
-                            fullWidth
-                        >
-                            <MenuItem value="A">A</MenuItem>
-                            <MenuItem value="Bb">B♭</MenuItem>
-                            <MenuItem value="B">B</MenuItem>
-                            <MenuItem value="C">C</MenuItem>
-                            <MenuItem value="C#">C♯</MenuItem>
-                        </Select>
-                        <FormHelperText>{formErrors.key ?? ' '}</FormHelperText>
-                    </FormControl>
-                  </Grid>
-                  {/* <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex' }}>
-                      <TextField
-                          type="number"
-                          value={formValues.durationSec ?? ''}
-                          onChange={handleNumberFieldChange}
-                          name="durationSec"
-                          label="Duration in Seconds"
-                          error={!!formErrors.durationSec}
-                          helperText={formErrors.durationSec ?? ' '}
-                          fullWidth
-                      />
-                  </Grid> */}
-              </Grid>
+                {makeTextField('title', 'title', 'Title', 6)}
+                {makeTextField('shortTitle', 'shortTitle', 'Short Title', 6)}
+                {makeTextField('arranger', 'arranger', 'Arranger', 4)}
+                {makeDropdownField('key', 'key', 'Key', 4, {
+                    A: "A", 
+                    Bb: "B♭",
+                    B: "B",
+                    C: "C",
+                    "C#": "C♯" 
+                })}
+                {makeDropdownField('voicing', 'voicing', 'Voicing', 4, Object.fromEntries(STD_VOICING_LIST.map(v => ([v.name, v.displayName]))))}
+            </Grid>
           </FormGroup>
           <Stack direction="row" spacing={2} justifyContent="space-between">
               <Button
@@ -190,6 +154,7 @@ export default function SongForm(props: SongFormProps) {
                   type="submit"
                   variant="contained"
                   size="large"
+                  disabled={verifyIsSongExceptId(formValues)}
                   loading={isSubmitting}
               >
                   {submitButtonLabel}
