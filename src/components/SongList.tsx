@@ -13,7 +13,7 @@ import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x
 import { useNavigate } from 'react-router';
 import { Song } from '../types';
 import PageContainer from './PageContainer';
-import { getAllSongs } from '../data/songs';
+import { useBackend } from '../backend/useBackend';
 
 
 const pageTitle = 'Songs';
@@ -24,6 +24,7 @@ export function SongList() {
     const [songs, setSongs] = React.useState<Array<Song>>([])
     
     const navigate = useNavigate();
+    const backend = useBackend();
 
     const handleRowClick = React.useCallback(
         ({row}) => { navigate(`/songs/${row.id}`)
@@ -36,7 +37,7 @@ export function SongList() {
     const handleRowDelete = React.useCallback((row) => () => {
         alert(`Deleting song ID ${row.id}`);
     }, []);
-    
+
     const columns = React.useMemo<GridColDef[]>(() => [
         { field: 'title', headerName: 'Title', width: 300 },
         { field: 'shortTitle', headerName: 'Short Title', width: 150 },
@@ -71,7 +72,7 @@ export function SongList() {
         setIsLoading(true);
 
         try {
-            const fetchedSongs = await getAllSongs();
+            const fetchedSongs = await backend.listSongs();
             setSongs(fetchedSongs)
         } catch (listDataError) {
             setError(listDataError as Error);

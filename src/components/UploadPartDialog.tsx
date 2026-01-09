@@ -1,7 +1,7 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField } from "@mui/material";
 import React from "react";
-import { uploadPartTracks } from "../data/songs";
 import { Song, STD_VOICING_LIST } from "../types";
+import { useBackend } from "../backend/useBackend";
 
 export interface UploadPartDialogProps {
     song: Song,
@@ -15,10 +15,13 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
     const [error, setError] = React.useState<Error>(null);
     // TODO add loadData() that gets the existing parts
     const [isLoading, setIsLoading] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false)
     // Each row: { selectedPartName, customPartName, isCustomPart, audioFile }
     const [rows, setRows] = React.useState([
         { selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }
     ]);
+    const backend = useBackend()
+    const songClient = backend.song(song.id)
 
     const reset = React.useCallback(() => {
         setRows([{ selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }])
@@ -67,11 +70,14 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
         const parts: string[] = rows.map(row => row.isCustomPart ? row.customPartName : row.selectedPartName);
         const files: File[] = rows.map(row => row.audioFile);
         try {
-            await uploadPartTracks(song.id, parts, files);
+            setIsSubmitting(true)
+            await songClient.uploadParts(parts, files);
             onClose(true)
             reset()
         } catch(e) {
             setError(e as Error);
+        } finally {
+            setIsSubmitting(false)
         }
     }, [song, rows, onClose, reset]);
     
@@ -139,6 +145,7 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
                 <Button 
                     variant="contained"
                     color="primary"
+                    loading={isSubmitting}
                     disabled={isLoading /* || !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">

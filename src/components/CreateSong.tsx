@@ -2,16 +2,17 @@ import Box from '@mui/material/Box';
 import * as React from 'react';
 import { useNavigate } from 'react-router';
 
-import { createSong } from "../data/songs";
 import { Song } from '../types';
 import PageContainer from "./PageContainer";
 import SongForm from './SongForm';
+import { useBackend } from '../backend/useBackend';
 
 export default function CreateSong() {
     const navigate = useNavigate();
+    const backend = useBackend();
 
     const handleSubmit = React.useCallback(async (formValues: Partial<Song>) => {
-        const createdSong = await createSong(formValues as Song);
+        const createdSong = await backend.createSong(formValues as Song);
         if (createdSong.id) {
             navigate(`/songs/${createdSong.id}`);
         }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Song, STD_VOICING_LIST } from '../types';
+import { Song, STD_VOICING_LIST, isCreatableSong } from '../types';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Box from '@mui/material/Box';
@@ -14,7 +14,6 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { useNavigate } from 'react-router';
-import { verifyIsSongExceptId } from '../data/songs';
 
 export interface SongFormProps {
     initialValues: Partial<Song>;
@@ -154,7 +153,7 @@ export default function SongForm(props: SongFormProps) {
                   type="submit"
                   variant="contained"
                   size="large"
-                  disabled={verifyIsSongExceptId(formValues)}
+                  disabled={isCreatableSong(formValues)}
                   loading={isSubmitting}
               >
                   {submitButtonLabel}

@@ -10,6 +10,10 @@ export interface Song {
   eTag?: string;
 }
 
+export function isCreatableSong(partialSong: Partial<Song>) {
+  return !!partialSong.title
+}
+
 export interface StereoMixSpec {
   leftFactors: number[];
   rightFactors: number[];

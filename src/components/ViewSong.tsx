@@ -12,13 +12,6 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router';
-import {
-    getDownloadUrl,
-    getMixesForSong,
-    getPartsForSong,
-    getSong,
-    updateSong
-} from '../data/songs';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
 import { STD_VOICING_LIST, STD_VOICINGS, stereoMix, trackName, type Song, type Track } from '../types';
@@ -28,10 +21,11 @@ import StereoMixView from './StereoMixView';
 import { TrackList } from './TrackList';
 import { UploadPartDialog } from './UploadPartDialog';
 import { IconButton, Tooltip } from '@mui/material';
-import { Download as DownloadIcon, FolderZip as FolderZipIcon } from '@mui/icons-material';
+import { Download as DownloadIcon } from '@mui/icons-material';
 import { download } from './utils';
 import DownloadZipButton from './DownloadZipButton';
 import StandardForm from './StandardForm';
+import { useBackend } from '../backend/useBackend';
 
 
 type DialogName = "createMix" | "uploadPart" | "";
@@ -40,6 +34,9 @@ export default function ViewSong() {
 
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
     // console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
+
+    const backend = useBackend();
+    const songClient = backend.song(songId);
     const navigate = useNavigate();
 
     const dialogs = useDialogs();
@@ -57,7 +54,7 @@ export default function ViewSong() {
         setIsLoading(true);
 
         try {
-            const fetchedSong = await getSong(songId);
+            const fetchedSong = await songClient.get();
 
             setSong(fetchedSong);
         } catch (fetchError) {
@@ -71,7 +68,6 @@ export default function ViewSong() {
     }, [loadData]);
 
     const handleSongEdit = React.useCallback(() => {
-        // navigate(`/songs/${songId}/edit`);
         console.log(`handleSongEdit`)
         setIsEditingSong(true);
     }, [setIsEditingSong]);
@@ -121,7 +117,7 @@ export default function ViewSong() {
     }, [navigate]);
 
     const handleEditSubmit = React.useCallback(async (formValues) => {
-        setSong(await updateSong({ ...formValues, id: songId, eTag: song.eTag }));
+        setSong(await songClient.update({ ...formValues, id: songId, eTag: song.eTag }));
         setIsEditingSong(false)
     }, [song, setSong, setIsEditingSong])
     
@@ -261,7 +257,7 @@ export default function ViewSong() {
                         typeColumns={[
                             { field: 'part', headerName: 'Part', type: 'string', width: 80 },
                         ]}
-                        fetchTracks={getPartsForSong}
+                        fetchTracks={() => songClient.listParts()}
                         idProp="part"
                         selected={selectedPart}
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
@@ -290,7 +286,7 @@ export default function ViewSong() {
                         typeColumns={[
                             { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
                         ]}
-                        fetchTracks={getMixesForSong}
+                        fetchTracks={() => songClient.listMixes()}
                         idProp="name"
                         selected={selectedMixName}
                         onFoundSelected={handleFoundSelected}
@@ -300,7 +296,6 @@ export default function ViewSong() {
                         downloadAll={
                             <DownloadZipButton 
                                 songId={songId}
-                                hoverTitle='Download a zip file with all mixes'
                             />}
                     />
                 </Box>
@@ -312,7 +307,7 @@ export default function ViewSong() {
                     padding={2}
                 >
                     <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
-                    <audio style={{ width: "500px" }} controls autoPlay src={getDownloadUrl(selectedTrack.mediaUrl)} />
+                    <audio style={{ width: "500px" }} controls autoPlay src={backend.url(selectedTrack.mediaUrl)} />
                     <Box sx={{ width: '50%' }}><StereoMixView mix={mix} /></Box>
                 </Stack>
             ) : (<div />) }

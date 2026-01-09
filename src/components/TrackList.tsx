@@ -7,12 +7,12 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import React from 'react';
-import { deleteTrack, getDownloadUrl } from '../data/songs';
 import { isTrackUpdating, secondsToHMS, Track } from '../types';
 import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import { download } from './utils';
+import { useBackend } from '../backend/useBackend';
 
 /**
  * This component is intended to be included in the song page, not to be an independent page.
@@ -106,6 +106,8 @@ export function TrackList({
     const [tracks, setTracks] = React.useState<Array<Track>>([]);
     const navigate = useNavigate();
     const dialogs = useDialogs();
+    const backend = useBackend();
+    const songClient = backend.song(songId)
 
     const idProp = 'trackId';
 
@@ -125,7 +127,7 @@ export function TrackList({
                 },
             );
             if (confirmed) {
-                await deleteTrack(row.url)
+                await songClient.deleteTrack(row.url)
                 await loadData()
             }
         } else {

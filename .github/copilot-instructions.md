@@ -6,7 +6,7 @@ Key facts
 - Framework: React (v19) bootstrapped with Create React App. Entry: `src/index.tsx` and `src/App.tsx`.
 - Routing: `react-router` is used in `src/index.tsx` with routes under `/songs` (list, view, create, edit).
 - UI: Material UI (@mui) components and `@mui/x-data-grid` are used across components (see `src/components/*`).
-- Network: `axios` client in `src/data/songs.tsx` targets a backend at `http://localhost:8080`. Endpoints: `/songs`, `/songs/:id`, `/songs/:id/parts`, `/songs/:id/mixes`.
+- Network: `axios` client in `useBackend()` targets a backend at `http://localhost:8080`. Endpoints: `/songs`, `/songs/:id`, `/songs/:id/parts`, `/songs/:id/mixes`.
 - Types: central domain types and helpers live in `src/types.ts` (Song, Track, helpers like `secondsToHMS`).
 
 Developer workflows and commands
