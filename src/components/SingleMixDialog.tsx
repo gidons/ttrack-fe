@@ -1,8 +1,8 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { createMixTrack, getDefaultMixesForSong, getMixesForSong, getPartsForSong } from "../data/songs";
 import { fullMixForParts, NULL_STEREO_MIX, Song, StereoMix } from "../types";
 import StereoMixView from "./StereoMixView";
+import { useBackend } from "../backend/useBackend";
 
 export interface SingleMixDialogProps {
     song: Song,
@@ -16,12 +16,16 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: "custom"};
 
     const [isLoading, setIsLoading] = React.useState(false)
+    const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [error, setError] = React.useState<Error>(null);
     const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
     const [existingMixNames, setExistingMixNames] = React.useState(new Set<string>())
     const [currentMix, setCurrentMix] = React.useState<StereoMix>(INITIAL_CUSTOM_MIX);
     const [customTrackName, setCustomTrackName] = React.useState('Custom');
     const [isCustomMix, setIsCustomMix] = React.useState(true);
+
+    const backend = useBackend()
+    const songClient = backend.song(song.id)
 
     const reset = React.useCallback(() => {
         console.log("Resetting.")
@@ -38,12 +42,12 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
         console.log(`Loading dialog data for song ${song.id}`);
         setIsLoading(true)
         try {
-            const parts = await getPartsForSong(song.id);
+            const parts = await songClient.listParts();
             setCurrentMix(fullMixForParts("custom", parts.map(pt => pt.part)))
-            const fetchedMixes = await getMixesForSong(song.id);
+            const fetchedMixes = await songClient.listMixes();
             console.log(`Existing mix names: ${[...existingMixNames].join()}`);
             setExistingMixNames(new Set(fetchedMixes.map(m => m.mix.name)))
-            const fetchedDflMixes = await getDefaultMixesForSong(song.id);
+            const fetchedDflMixes = await songClient.listDefaultMixes();
             setDefaultMixes(fetchedDflMixes);
         } catch (fetchError) {
             console.error(`fetchError: ${fetchError}`)
@@ -94,19 +98,21 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     }, [setCustomTrackName]);
 
     const handleSubmit = React.useCallback(async () => {
-            const mix: StereoMix = { ...currentMix, name: trackName }
-            console.log("Creating track with mix: " + JSON.stringify(mix));
-            try {
-                const created = await createMixTrack(song.id, mix, isCustomMix);
-                console.log("Created track: " + JSON.stringify(created));
-                onClose(true)
-                reset()
-            } catch(e) {
-                setError(e as Error);
-                throw e;
-            }
-        }, [song, trackName, currentMix]
-    );
+        const mix: StereoMix = { ...currentMix, name: trackName }
+        console.log("Creating track with mix: " + JSON.stringify(mix));
+        try {
+            setIsSubmitting(true)
+            const created = await songClient.createMix(mix, isCustomMix);
+            console.log("Created track: " + JSON.stringify(created));
+            onClose(true)
+            reset()
+        } catch(e) {
+            setError(e as Error);
+            throw e;
+        } finally {
+            setIsSubmitting(false)
+        }
+    }, [song, trackName, currentMix, setIsSubmitting]);
 
     return (
         <Stack spacing={1}>
@@ -153,6 +159,7 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
                 <Button 
                     variant="contained"
                     color="primary"
+                    loading={isSubmitting}
                     disabled={isLoading /* || !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">

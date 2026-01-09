@@ -2,9 +2,9 @@ import { Alert, Box, Button, DialogActions, FormControl, Link, Stack, TextField,
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import type { TreeViewItemId } from '@mui/x-tree-view/models';
 import React from "react";
-import { createMixPackage, getMixesForSong, getPartsForSong } from "../data/songs";
 import { MixTrack, Song, STD_MIX_TYPES } from "../types";
 import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
+import { useBackend } from "../backend/useBackend";
 
 export interface BulkMixDialogProps {
     song: Song,
@@ -24,14 +24,16 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
     const [packageDesc, setPackageDesc] = React.useState('');
 
     const parentNodeNames = STD_MIX_TYPES.filter(t => t != 'Full Mix');
+    const songClient = useBackend().song(song.id)
+
 
     const loadData = React.useCallback(async () => {
         setIsLoading(true)
         try {
             // console.log(`Loading dialog data for song ${song.id}`);
-            const partNames = (await getPartsForSong(song.id)).map(pt => pt.part);
+            const partNames = (await songClient.listParts()).map(pt => pt.part);
             setParts(partNames)
-            const fetchedMixes = await getMixesForSong(song.id);
+            const fetchedMixes = await songClient.listMixes();
             setExistingMixes(fetchedMixes);
             const fetchedNames = fetchedMixes.map(m => m.mix.name);
             const selectedNames = [...(new Set<string>([...selectedMixNames, ...fetchedNames]))];
@@ -102,12 +104,23 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
 
     const handleSubmit = React.useCallback(async () => {
         // console.log(`handleSubmit: packageDesc=${packageDesc}; selectedMixNames=${JSON.stringify(selectedMixNames)}`);
-        const mixesToCreate = selectedMixNames.filter(n => !parentNodeNames.includes(n) && !existingMixNames.includes(n))
-        console.log(`Mixes to create: ${mixesToCreate.join(",")}`)
+        const mixDescriptions = selectedMixNames.filter(n => !parentNodeNames.includes(n) && !existingMixNames.includes(n))
+        console.log(`Mixes to create: ${mixDescriptions.join(",")}`)
         // TODO handle errors
-        await createMixPackage(song.id, parts, mixesToCreate, packageDesc, 1, 0)
-        onClose(true)
-    }, [packageDesc, selectedMixNames]);
+        setIsSubmitting(true)
+        try {
+            await songClient.createMixPackage({ 
+                parts, 
+                mixDescriptions, 
+                packageDescription: packageDesc.trim() || null, 
+                speedFactor: 1, 
+                pitchShift: 0 
+            })
+            onClose(true)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }, [packageDesc, selectedMixNames, setIsSubmitting]);
 
     return (
         <Stack spacing={1}>

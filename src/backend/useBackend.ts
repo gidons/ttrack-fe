@@ -5,6 +5,14 @@ import { useContext } from 'react';
 import { AuthContext } from './AuthContext';
 import { sleep } from '../components/utils';
 
+export interface MixPackageProps {
+    parts: string[], 
+    mixDescriptions: string[],
+    packageDescription: string | null,
+    speedFactor: number,
+    pitchShift: number
+}
+
 export interface SongClient {
     get: () => Promise<Song>
     update: (song: Song) => Promise<Song>
@@ -12,9 +20,11 @@ export interface SongClient {
     deleteTrack: (trackId: string) => Promise<void>
     listParts: () => Promise<PartTrack[]>
     listMixes: () => Promise<MixTrack[]>
+    listDefaultMixes: () => Promise<StereoMix[]>
     uploadPart: (name: string, audioFile: File) => Promise<PartTrack>
     uploadParts: (parts: string[], files: File[]) => Promise<PartTrack[]>
     createMix: (mix: StereoMix, isCustom: boolean) => Promise<MixTrack>
+    createMixPackage: (props: MixPackageProps) => Promise<MixTrack[]>
     submitZipMixesRequest: () => Promise<string>
 }
 
@@ -105,6 +115,10 @@ export function useBackend() : Backend {
             const response = await client.get(`${this.basePath}/mixes`);
             return response.data.map(mixTrackDtoToMixTrack);
         }
+        async listDefaultMixes() {
+            const response = await client.get(`${this.basePath}/defaultMixes`);
+            return response.data.map(mixDtoToMix);
+        }
         async uploadPart(partName: string, audioFile: File) {
             const formData = new FormData();
             formData.append('audioFile', audioFile);
@@ -133,6 +147,10 @@ export function useBackend() : Backend {
                 description: isCustom ? JSON.stringify(mix.spec) : null
             });
             return mixTrackDtoToMixTrack(response.data[0]);
+        }
+        async createMixPackage(props: MixPackageProps) {
+            const response = await client.post(`${this.basePath}/mixes`, props)
+            return (response.data as MixTrackDTO[]).map(mixTrackDtoToMixTrack)            
         }
         async submitZipMixesRequest() {
             const response = await client.post(`${this.basePath}/zip`)
