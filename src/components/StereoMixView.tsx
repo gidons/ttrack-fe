@@ -13,7 +13,7 @@ export interface StereoMixViewProps {
 }
 
 export default function StereoMixView({ mix: { name, spec, parts }, isEditable = false }: StereoMixViewProps) {
-    console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
+    // console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
     const [left, setLeft] = React.useState(spec.leftFactors ?? []);
     const [right, setRight] = React.useState(spec.rightFactors ?? []);
 
@@ -49,7 +49,6 @@ export default function StereoMixView({ mix: { name, spec, parts }, isEditable =
     }
 
     const handleFactorSliderChange = React.useCallback((isLeft: boolean, partIndex: number, value: number) => {
-        console.log(`handleFactorSliderChange(${isLeft}, ${partIndex}, ${value})`);
         if (isLeft) {
             setLeft(f => updateFactors(f, partIndex, value));
         } else {

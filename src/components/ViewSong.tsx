@@ -1,3 +1,4 @@
+import { Close } from '@mui/icons-material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -6,26 +7,21 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useBackend } from '../backend/useBackend';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
-import { STD_VOICING_LIST, STD_VOICINGS, stereoMix, trackName, type Song, type Track } from '../types';
+import { STD_VOICING_LIST, stereoMix, trackName, type Song, type Track } from '../types';
+import KeyField from './KeyField';
 import { MixDialog } from './MixDialog';
 import PageContainer from './PageContainer';
+import StandardForm from './StandardForm';
 import StereoMixView from './StereoMixView';
 import { TrackList } from './TrackList';
 import { UploadPartDialog } from './UploadPartDialog';
-import { IconButton, Tooltip } from '@mui/material';
-import { Download as DownloadIcon } from '@mui/icons-material';
-import { download } from './utils';
-import DownloadZipButton from './DownloadZipButton';
-import StandardForm from './StandardForm';
-import { useBackend } from '../backend/useBackend';
 
 
 type DialogName = "createMix" | "uploadPart" | "";
@@ -48,6 +44,10 @@ export default function ViewSong() {
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
     const [openDialog, setOpenDialog] = React.useState<DialogName>("");
     const [isEditingSong, setIsEditingSong] = React.useState(false);
+
+    if (selectedTrack && !selectedMixName && !selectedPart) {
+        setSelectedTrack(null)
+    }
 
     const loadData = React.useCallback(async () => {
         setError(null);
@@ -152,19 +152,6 @@ export default function ViewSong() {
             );
         }
 
-        function makeDisplayField(title: string, value: string, smSize: number = 6) {
-            return (
-                <Grid size={{ xs: 12, sm: smSize }}>
-                    <Paper sx={{ px: 2, py: 1 }}>
-                        <Typography variant="overline">{title}</Typography>
-                        <Typography variant="body1" sx={{ mb: 1 }}>
-                            {value}&nbsp;
-                        </Typography>
-                    </Paper>
-                </Grid>
-            );
-        }
-
         return song ? (
             <StandardForm<Song>
                 initialValues={song}
@@ -178,7 +165,7 @@ export default function ViewSong() {
                     {name: "title", displayName: "Title", smSize: 6},
                     {name: "shortTitle", displayName: "Short Title", smSize: 6},
                     {name: "arranger", displayName: "Arranger", smSize: 4},
-                    {name: "key", displayName: "Key", smSize: 4, options: {
+                    {name: "key", displayName: "Key", smSize: 4, type: KeyField, options: {
                         A: "A", 
                         Bb: "B♭",
                         B: "B",
@@ -261,18 +248,10 @@ export default function ViewSong() {
                         idProp="part"
                         selected={selectedPart}
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         canDelete={(track: Track) => false}
                         onFoundSelected={handleFoundSelected}
                         playButtonPath={`/songs/${songId}/part/{id}`}
                         onAdd={() => setOpenDialog("uploadPart")}
-                        downloadAll={
-                            <Tooltip title="Download all-part WAV">
-                                <IconButton size="small" onClick={() => download(song.allPartsMediaUrl)}>
-                                    <DownloadIcon/>
-                                </IconButton>
-                            </Tooltip>
-                        }
                     />
                 </Box>
                 <Box flexGrow='1'>
@@ -286,17 +265,13 @@ export default function ViewSong() {
                         typeColumns={[
                             { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
                         ]}
-                        fetchTracks={() => songClient.listMixes()}
+                        fetchTracks={() => songClient.listMixes().then(l => l.filter(t => t.trackId != 'All'))}
                         idProp="name"
                         selected={selectedMixName}
                         onFoundSelected={handleFoundSelected}
                         canDelete={(track: Track) => track.trackId != 'All'}
                         playButtonPath={`/songs/${songId}/mix/{id}`}
                         onAdd={() => setOpenDialog("createMix")}
-                        downloadAll={
-                            <DownloadZipButton 
-                                songId={songId}
-                            />}
                     />
                 </Box>
             </Stack>
@@ -307,6 +282,7 @@ export default function ViewSong() {
                     padding={2}
                 >
                     <Typography variant="h6">Now playing: {trackName(selectedTrack)}</Typography>
+                    <Button startIcon={<Close/>} onClick={() => navigate(`/songs/${songId}`)}>Close</Button>
                     <audio style={{ width: "500px" }} controls autoPlay src={backend.url(selectedTrack.mediaUrl)} />
                     <Box sx={{ width: '50%' }}><StereoMixView mix={mix} /></Box>
                 </Stack>

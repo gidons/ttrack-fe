@@ -1,9 +1,8 @@
-import axios, { Axios, AxiosInstance } from 'axios';
-import { isPartTrack, MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, Track, TrackInfo } from '../types';
-import { useAuth } from '@clerk/clerk-react';
+import axios from 'axios';
 import { useContext } from 'react';
-import { AuthContext } from './AuthContext';
 import { sleep } from '../components/utils';
+import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TrackInfo } from '../types';
+import { AuthContext } from './AuthContext';
 
 export interface MixPackageProps {
     parts: string[], 
@@ -25,7 +24,7 @@ export interface SongClient {
     uploadParts: (parts: string[], files: File[]) => Promise<PartTrack[]>
     createMix: (mix: StereoMix, isCustom: boolean) => Promise<MixTrack>
     createMixPackage: (props: MixPackageProps) => Promise<MixTrack[]>
-    submitZipMixesRequest: () => Promise<string>
+    submitZipMixesRequest: (trackIds: string[]) => Promise<string>
 }
 
 export interface Task {
@@ -152,8 +151,8 @@ export function useBackend() : Backend {
             const response = await client.post(`${this.basePath}/mixes`, props)
             return (response.data as MixTrackDTO[]).map(mixTrackDtoToMixTrack)            
         }
-        async submitZipMixesRequest() {
-            const response = await client.post(`${this.basePath}/zip`)
+        async submitZipMixesRequest(trackIds: string[]) {
+            const response = await client.post(`${this.basePath}/zip`, trackIds)
             return response.data as string // task ID
         }
         

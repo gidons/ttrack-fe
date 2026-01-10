@@ -10,18 +10,19 @@ export type ZipButtonState = "DISABLED" | "READY" | "INPROGRESS" | "SUCCEEDED" |
 
 export interface DownloadZipButtonProps {
     songId: string,
-    hoverTitle?: Record<ZipButtonState, string>
+    trackIds: string[],
+    hoverTitle?: Partial<Record<ZipButtonState, string>>
 }
 
 const defaultHoverTitle: Record<ZipButtonState, string> = {
-    "DISABLED": "Zipping disabled.",
-    "READY": "Create a zip file with all tracks.",
-    "INPROGRESS": "Zipping in progress.",
-    "SUCCEEDED": "Zip file ready. Click to download.",
-    "FAILED": "Failed to create zip file. Click to clear."
+    DISABLED: "Zipping disabled.",
+    READY: "Create a zip file with all tracks.",
+    INPROGRESS: "Zipping in progress.",
+    SUCCEEDED: "Zip file ready. Click to download.",
+    FAILED: "Failed to create zip file. Click to clear."
 }
 
-export default function DownloadZipButton({songId, hoverTitle}: DownloadZipButtonProps) {
+export default function DownloadZipButton({songId, hoverTitle, trackIds}: DownloadZipButtonProps) {
 
     const [taskId, setTaskId] = React.useState<string>(null)
     const [downloadUrl, setDownloadUrl] = React.useState<string>(null)
@@ -34,23 +35,22 @@ export default function DownloadZipButton({songId, hoverTitle}: DownloadZipButto
         switch(state) {
             case "DISABLED": return;
             case "READY":
-                const newTaskId = await song(songId).submitZipMixesRequest()
+                const newTaskId = await song(songId).submitZipMixesRequest(trackIds)
                 setTaskId(newTaskId);
                 setState("INPROGRESS")
-                waitForTask(newTaskId).then(task => {
-                    console.log(`Task ${taskId} ended: ${task}`)
-                    if (task.status == "SUCCEEDED") {
-                        const downloadUrl = task.output["downloadUrl"];
-                        setDownloadUrl(downloadUrl)
-                        setState("SUCCEEDED")
-                        notifications.show("Zip file is ready to download.", { severity: 'success' })
-                    } else {
-                        setState("FAILED")
-                        notifications.show("Zip task failed.", { severity: 'error' })
-                    }
-                })
+                const task = await waitForTask(newTaskId)
+                console.log(`Task ${taskId} ended: ${task}`)
+                if (task.status == "SUCCEEDED") {
+                    const downloadUrl = task.output["downloadUrl"];
+                    setDownloadUrl(downloadUrl)
+                    setState("SUCCEEDED")
+                    notifications.show("Zip file is ready to download.", { severity: 'success' })
+                } else {
+                    setState("FAILED")
+                    notifications.show("Zip task failed.", { severity: 'error' })
+                }                
                 return
-            case "INPROGRESS": return; // shouldn't happen
+            case "INPROGRESS": return; // shouldn't happen: in-progress isn't clickable
             case "SUCCEEDED":
                 download(downloadUrl)
                 setState("READY")
@@ -59,7 +59,7 @@ export default function DownloadZipButton({songId, hoverTitle}: DownloadZipButto
                 setState("READY")
                 return
         }
-    }, [songId, state, taskId, downloadUrl, setTaskId, setState, setDownloadUrl])
+    }, [songId, trackIds, state, taskId, downloadUrl, setTaskId, setState, setDownloadUrl])
     const hover = {...defaultHoverTitle, ...hoverTitle}[state]
     var icon
     switch(state) {

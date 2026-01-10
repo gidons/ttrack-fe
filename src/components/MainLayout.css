@@ -1,5 +1,17 @@
-.center {
+.hcenter {
+    display: flex;
+    justify-items: center;
+    height: 100%;
+}
+
+.vcenter {
     display: flex;
     align-items: center;
+    height: 100%;
+}
+
+.top {
+    display: flex;
+    align-items: baseline;
     height: 100%;
 }

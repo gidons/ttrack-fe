@@ -21,16 +21,19 @@ export interface FormFieldSpec {
     displayName: string;
     smSize?: GridSize;
     options?: object;
+    type?: (props: FormFieldProps) => JSX.Element;
 }
 
-interface FormFieldProps extends FormFieldSpec {
+export interface FormFieldState {
     error?: string;
     onChange: (value: string) => void;
     key?: string;
     editable: boolean
 }
 
-function TextDisplayField({ initialValue, displayName, smSize, key }: FormFieldProps) {
+type FormFieldProps = FormFieldSpec & FormFieldState
+
+export function TextDisplayField({ initialValue, displayName }: FormFieldProps) {
     return (
         <Paper sx={{ px: 2, py: 1 }}>
             <Typography variant="overline">{displayName}</Typography>
@@ -150,11 +153,8 @@ export default function StandardForm<T>(props: StandardFormProps<T>) {
             key: `field-${name}`,
             editable: editable
         }
-        if (fullProps['options']) {
-            return DropdownFormField(fullProps as DropdownFieldProps)
-        } else {
-            return TextFormField(fullProps)
-        }
+        const renderer = fullProps.type ?? (fullProps['options'] ? DropdownFormField : TextFormField)
+        return renderer(fullProps)
     }, [initialValues, editable, setFormValues])
 
     React.useEffect(() => {

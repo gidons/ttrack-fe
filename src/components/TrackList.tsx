@@ -8,11 +8,12 @@ import Box from '@mui/material/Box';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import React from 'react';
 import { isTrackUpdating, secondsToHMS, Track } from '../types';
-import { Button, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
+import { Button, CircularProgress, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import { download } from './utils';
 import { useBackend } from '../backend/useBackend';
+import DownloadZipButton from './DownloadZipButton';
 
 /**
  * This component is intended to be included in the song page, not to be an independent page.
@@ -31,7 +32,6 @@ interface TrackListProps {
     playButtonPath: string;
     // Add action: either a callback or a path to go to
     onAdd?: () => void;
-    downloadAll: JSX.Element;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -80,7 +80,7 @@ function renderUpdatedCell(params: GridRenderCellParams<Track>) {
     const updated = track.updated
     const isUpdating = isTrackUpdating(track)
     return (
-        <Box className='center'>
+        <Box className='vcenter'>
             <Typography>
                 {isUpdating ? "updating..." : toUpdatedTime(updated)}
             </Typography>
@@ -98,7 +98,6 @@ export function TrackList({
     playButtonPath,
     canDelete,
     onAdd,
-    downloadAll
 }: TrackListProps) {
 
     const [isLoading, setIsLoading] = React.useState(true);
@@ -218,7 +217,7 @@ export function TrackList({
     }
 
     React.useEffect(() => { loadData() }, [loadData])
-    React.useEffect(() => { findSelectedTrack() }, [selected, isLoading, tracks]);
+    React.useEffect(() => { findSelectedTrack() }, [selected, isLoading, tracks, onFoundSelected]);
 
     return (
         <Stack direction="column">
@@ -226,21 +225,20 @@ export function TrackList({
                 <Typography variant="h6">{title}</Typography>
                 <TableToolbar>
                     <Tooltip title="Reload data" placement="right" enterDelay={1000}>
-                        <div>
-                            <IconButton size="small" aria-label="refresh" onClick={handleRefresh}>
-                                <RefreshIcon />
-                            </IconButton>
-                        </div>
+                        {isLoading ? <CircularProgress size={20}/> :
+                        <IconButton size="small" aria-label="refresh" onClick={handleRefresh}>
+                            <RefreshIcon />
+                        </IconButton>}
                     </Tooltip>
-                    { downloadAll }
-                    { onAdd ? (
-                            <Button 
-                                startIcon={<AddIcon/>}
-                                onClick={handleAdd}>
-                                    Add
-                            </Button>
-                        ) : (<div/>) 
-                    }
+                    <DownloadZipButton 
+                        songId={songId}
+                        trackIds={tracks.map(t => t.trackId)}
+                    />
+                    <Button 
+                        startIcon={<AddIcon/>}
+                        onClick={handleAdd}>
+                            Add
+                    </Button>
                 </TableToolbar>
             </TableHeader>
             <Box sx={{ flex: 1, width: '100%' }}>
