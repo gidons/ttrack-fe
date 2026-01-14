@@ -11,7 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router';
-import { Song } from '../types';
+import { Song, STD_VOICINGS } from '../types';
 import PageContainer from './PageContainer';
 import { useBackend } from '../backend/useBackend';
 
@@ -43,6 +43,7 @@ export function SongList() {
         { field: 'shortTitle', headerName: 'Short Title', width: 150 },
         { field: 'arranger', headerName: 'Arranger', width: 150 },
         { field: 'key', headerName: 'Key', width: 80 },
+        { field: 'voicing', headerName: 'Voicing', width: 100, valueFormatter: (value) => STD_VOICINGS[value]?.displayName },
         {
             field: 'actions',
             type: 'actions',

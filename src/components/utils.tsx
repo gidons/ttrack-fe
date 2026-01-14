@@ -20,3 +20,9 @@ export async function sleep(ms: number) {
 export function isEmpty(obj: object) {
   return Object.keys(obj).length === 0
 }
+
+export const SHARP_SYM = '♯'
+export const FLAT_SYM = '♭'
+export function displayKeyValue(value: string) {
+  return value.replace('#', SHARP_SYM).replace('b', FLAT_SYM)
+}

@@ -2,17 +2,12 @@ import { Alert, Box, Button, DialogActions, FormControl, Link, Stack, TextField,
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import type { TreeViewItemId } from '@mui/x-tree-view/models';
 import React from "react";
-import { MixTrack, Song, STD_MIX_TYPES } from "../types";
-import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
 import { useBackend } from "../backend/useBackend";
+import { MixTrack, STD_MIX_TYPES } from "../types";
+import { AddMixDialogProps } from "./MixDialog";
+import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
 
-export interface BulkMixDialogProps {
-    song: Song,
-    onSwitchToSingle: () => void,
-    onClose: (success: boolean) => void
-}
-
-export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialogProps) {
+export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProps) {
     // console.log("BulkMixDialog: start render");
 
     const [isLoading, setIsLoading] = React.useState(false)
@@ -25,7 +20,6 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
 
     const parentNodeNames = STD_MIX_TYPES.filter(t => t != 'Full Mix');
     const songClient = useBackend().song(song.id)
-
 
     const loadData = React.useCallback(async () => {
         setIsLoading(true)
@@ -124,8 +118,8 @@ export function BulkMixDialog({song, onSwitchToSingle, onClose } : BulkMixDialog
 
     return (
         <Stack spacing={1}>
-            <Typography variant="h6">Create new mix package for <em>{song?.title??"..."}</em></Typography>
-            <Link onClick={onSwitchToSingle}>Switch to Single Mode</Link>
+            <Typography variant="h6">Create new mix package</Typography>
+            <Link onClick={onSwitchMode}>Switch to Single Mode</Link>
             {error && (
                 <Box sx={{ flexGrow: 1 }}>
                     <Alert severity="error">{error.message}</Alert>

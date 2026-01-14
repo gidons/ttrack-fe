@@ -10,7 +10,7 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useResolvedPath } from 'react-router';
 import { useBackend } from '../backend/useBackend';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
@@ -24,8 +24,6 @@ import { TrackList } from './TrackList';
 import { UploadPartDialog } from './UploadPartDialog';
 
 
-type DialogName = "createMix" | "uploadPart" | "";
-
 export default function ViewSong() {
 
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
@@ -38,12 +36,13 @@ export default function ViewSong() {
     const dialogs = useDialogs();
     const notifications = useNotifications();
 
-    const [song, setSong] = React.useState<Song | null>(null);
+    const [song, setSong] = React.useState<Partial<Song> | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [selectedTrack, setSelectedTrack] = React.useState<Track>(null);
-    const [openDialog, setOpenDialog] = React.useState<DialogName>("");
-    const [isEditingSong, setIsEditingSong] = React.useState(false);
+    
+    const isNewSong = songId == 'new'
+    const isEditingSong = window.location.pathname.includes('edit') || isNewSong;
 
     if (selectedTrack && !selectedMixName && !selectedPart) {
         setSelectedTrack(null)
@@ -51,6 +50,11 @@ export default function ViewSong() {
 
     const loadData = React.useCallback(async () => {
         setError(null);
+        if (isNewSong) {
+            setIsLoading(false)
+            setSong({})
+            return
+        }
         setIsLoading(true);
 
         try {
@@ -68,9 +72,8 @@ export default function ViewSong() {
     }, [loadData]);
 
     const handleSongEdit = React.useCallback(() => {
-        console.log(`handleSongEdit`)
-        setIsEditingSong(true);
-    }, [setIsEditingSong]);
+        navigate(`/songs/${songId}/edit`)
+    }, [navigate]);
 
     const handleSongDelete = React.useCallback(async () => {
         if (!song) {
@@ -117,9 +120,14 @@ export default function ViewSong() {
     }, [navigate]);
 
     const handleEditSubmit = React.useCallback(async (formValues) => {
-        setSong(await songClient.update({ ...formValues, id: songId, eTag: song.eTag }));
-        setIsEditingSong(false)
-    }, [song, setSong, setIsEditingSong])
+        if (isNewSong) {
+            const newSong = await backend.createSong(formValues);
+            navigate(`/songs/${newSong.id}`)
+        } else {
+            setSong(await songClient.update({ ...formValues, id: isNewSong ? null : songId, eTag: isNewSong ? null : song.eTag}));
+            navigate(`/songs/${songId}`)
+        }
+    }, [song, isNewSong, setSong, navigate])
     
     const handleFoundSelected = React.useCallback((track: Track) => {
         console.log("Setting selected track to: " + JSON.stringify(track));
@@ -158,7 +166,7 @@ export default function ViewSong() {
                 submitButtonLabel='Save'
                 cancelButtonLabel='Cancel'
                 onSubmit={handleEditSubmit}
-                onCancel={() => { setIsEditingSong(false) }}
+                onCancel={() => { navigate(`/songs/${songId}`) }}
                 validate={(song: Partial<Song>) => { return {} }}
                 editable={isEditingSong}
                 fields={[
@@ -216,13 +224,14 @@ export default function ViewSong() {
     ]);
 
     const mix = React.useMemo(() => stereoMix(selectedTrack), [selectedTrack]);
+    const showTracks = !isNewSong && !isLoading
 
     return (
         <PageContainer
-            title={isLoading ? "Loading..." : `${song.title}`}
+            title={isLoading ? "Loading..." : isNewSong ? "New Song" : `${song.title}`}
             breadcrumbs={[
                 { title: 'Songs', path: '/songs' },
-                { title: isLoading ? "Loading..." : `${song.title}` },
+                { title: isLoading ? "Loading..." : isNewSong ? "New" : `${song.title}` },
             ]}
         >
             <Box sx={{ display: 'flex', flex: 1, width: '100%' }}>{renderView}</Box>
@@ -232,14 +241,11 @@ export default function ViewSong() {
                 direction="row"
                 spacing={2}
                 sx={{ width: '100%' }}>
+                {showTracks &&
                 <Box flexGrow='1'
                     sx={{ width: '50%' }}>
-                    {openDialog == "uploadPart" && <UploadPartDialog
-                        song={song}
-                        onClose={() => { setOpenDialog("")}}
-                        />}
                     <TrackList
-                        songId={songId}
+                        song={song as Song}
                         title="Parts"
                         typeColumns={[
                             { field: 'part', headerName: 'Part', type: 'string', width: 80 },
@@ -248,19 +254,16 @@ export default function ViewSong() {
                         idProp="part"
                         selected={selectedPart}
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
-                        canDelete={(track: Track) => false}
+                        canDelete={() => false}
                         onFoundSelected={handleFoundSelected}
                         playButtonPath={`/songs/${songId}/part/{id}`}
-                        onAdd={() => setOpenDialog("uploadPart")}
+                        addDialog={UploadPartDialog}
                     />
-                </Box>
+                </Box>}
+                {showTracks &&
                 <Box flexGrow='1'>
-                    {openDialog == "createMix" && <MixDialog
-                        song={song}
-                        onClose={() => setOpenDialog("")}
-                    />}
                     <TrackList
-                        songId={songId}
+                        song={song as Song}
                         title="Mixes"
                         typeColumns={[
                             { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
@@ -271,11 +274,11 @@ export default function ViewSong() {
                         onFoundSelected={handleFoundSelected}
                         canDelete={(track: Track) => track.trackId != 'All'}
                         playButtonPath={`/songs/${songId}/mix/{id}`}
-                        onAdd={() => setOpenDialog("createMix")}
+                        addDialog={MixDialog}
                     />
-                </Box>
+                </Box>}
             </Stack>
-            { selectedTrack ? (
+            { selectedTrack && (
                 <Stack
                     sx={{ width: '100%', justifyContent: "center", alignItems: 'center' }}
                     spacing={2}
@@ -286,7 +289,7 @@ export default function ViewSong() {
                     <audio style={{ width: "500px" }} controls autoPlay src={backend.url(selectedTrack.mediaUrl)} />
                     <Box sx={{ width: '50%' }}><StereoMixView mix={mix} /></Box>
                 </Stack>
-            ) : (<div />) }
+            )}
         </PageContainer>
     );
 }

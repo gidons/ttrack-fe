@@ -22,7 +22,7 @@ export interface SongClient {
     listDefaultMixes: () => Promise<StereoMix[]>
     uploadPart: (name: string, audioFile: File) => Promise<PartTrack>
     uploadParts: (parts: string[], files: File[]) => Promise<PartTrack[]>
-    createMix: (mix: StereoMix, isCustom: boolean) => Promise<MixTrack>
+    createMix: (mix: StereoMix, isCustom: boolean, overwrite: boolean) => Promise<MixTrack>
     createMixPackage: (props: MixPackageProps) => Promise<MixTrack[]>
     submitZipMixesRequest: (trackIds: string[]) => Promise<string>
 }
@@ -53,8 +53,6 @@ export function useBackend() : Backend {
     const serverUrl = import.meta.env.VITE_BACKEND_URL
 
     const authContext = useContext(AuthContext)
-    // console.log(`AuthContext: ${JSON.stringify(authContext)}`)
-
     const client = axios.create({ baseURL: serverUrl })
     if (authContext.getToken) {
         client.interceptors.request.use(async (config) => {
@@ -63,7 +61,7 @@ export function useBackend() : Backend {
         })
     }
 
-    function getDownloadUrl(path: string) { return serverUrl + path; }
+    function getDownloadUrl(path: string) { return path.startsWith('http') ? path : serverUrl + path; }
     function trackDtoToTrack(dto: TrackDTO) : TrackInfo {
         const { created, updated, ...others } = dto;
         const createdDate = (created ? new Date(created) : null)
@@ -91,7 +89,7 @@ export function useBackend() : Backend {
         }
         async get() { 
             const response = await client.get(this.basePath);
-            return { ...response.data, allPartsMediaUrl: getDownloadUrl(`${this.basePath}/mixes/All/media`) };
+            return response.data
         }
         async update(song: Song) { 
             console.log(`Updating song: ${JSON.stringify(song)}`)
@@ -139,8 +137,8 @@ export function useBackend() : Backend {
             const response = await client.put(`${this.basePath}/parts?overwrite=true`, formData);
             return response.data.map(partTrackDtoToPartTrack);
         }
-        async createMix(mix: StereoMix, isCustom: boolean) {
-            const response = await client.post(`${this.basePath}/mixes`, {
+        async createMix(mix: StereoMix, isCustom: boolean, overwrite: boolean) {
+            const response = await client.post(`${this.basePath}/mixes?overwrite=${overwrite}`, {
                 name: mix.name,
                 parts: mix.parts,
                 description: isCustom ? JSON.stringify(mix.spec) : null
@@ -152,6 +150,7 @@ export function useBackend() : Backend {
             return (response.data as MixTrackDTO[]).map(mixTrackDtoToMixTrack)            
         }
         async submitZipMixesRequest(trackIds: string[]) {
+            console.log(`Submitting zip request for tracks: ${trackIds}`)
             const response = await client.post(`${this.basePath}/zip`, trackIds)
             return response.data as string // task ID
         }

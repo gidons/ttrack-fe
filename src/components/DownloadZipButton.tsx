@@ -1,6 +1,6 @@
 import React from 'react'
 import { IconButton, Tooltip } from '@mui/material'
-import { Download as DownloadIcon, FileDownload, FileDownloadOff, FolderZip as FolderZipIcon } from '@mui/icons-material';
+import { FileDownload, FileDownloadOff, FolderZip } from '@mui/icons-material';
 import CircularProgress from '@mui/material/CircularProgress';
 import { download } from './utils';
 import { useBackend } from '../backend/useBackend';
@@ -35,21 +35,7 @@ export default function DownloadZipButton({songId, hoverTitle, trackIds}: Downlo
         switch(state) {
             case "DISABLED": return;
             case "READY":
-                const newTaskId = await song(songId).submitZipMixesRequest(trackIds)
-                setTaskId(newTaskId);
-                setState("INPROGRESS")
-                const task = await waitForTask(newTaskId)
-                console.log(`Task ${taskId} ended: ${task}`)
-                if (task.status == "SUCCEEDED") {
-                    const downloadUrl = task.output["downloadUrl"];
-                    setDownloadUrl(downloadUrl)
-                    setState("SUCCEEDED")
-                    notifications.show("Zip file is ready to download.", { severity: 'success' })
-                } else {
-                    setState("FAILED")
-                    notifications.show("Zip task failed.", { severity: 'error' })
-                }                
-                return
+                return await submitTaskAndWait();
             case "INPROGRESS": return; // shouldn't happen: in-progress isn't clickable
             case "SUCCEEDED":
                 download(downloadUrl)
@@ -61,10 +47,10 @@ export default function DownloadZipButton({songId, hoverTitle, trackIds}: Downlo
         }
     }, [songId, trackIds, state, taskId, downloadUrl, setTaskId, setState, setDownloadUrl])
     const hover = {...defaultHoverTitle, ...hoverTitle}[state]
-    var icon
+    let icon: JSX.Element
     switch(state) {
         // case "DISABLED": icon = ???; break;
-        case "READY": icon = <FolderZipIcon/>; break
+        case "READY": icon = <FolderZip/>; break
         case "INPROGRESS": icon = <CircularProgress size={20}/>; break
         case "FAILED": icon = <FileDownloadOff/>; break
         case "SUCCEEDED": icon = <FileDownload/>; break
@@ -77,4 +63,22 @@ export default function DownloadZipButton({songId, hoverTitle, trackIds}: Downlo
             </IconButton>
         </Tooltip>
     )
+
+    async function submitTaskAndWait() {
+        const newTaskId = await song(songId).submitZipMixesRequest(trackIds);
+        setTaskId(newTaskId);
+        setState("INPROGRESS");
+        const task = await waitForTask(newTaskId);
+        console.log(`Task ${taskId} ended: ${task}`);
+        if (task.status == "SUCCEEDED") {
+            const downloadUrl = task.output["downloadUrl"];
+            setDownloadUrl(downloadUrl);
+            setState("SUCCEEDED");
+            notifications.show("Zip file is ready to download.", { severity: 'success' });
+        } else {
+            setState("FAILED");
+            notifications.show("Zip task failed.", { severity: 'error' });
+        }
+        return;
+    }
 }

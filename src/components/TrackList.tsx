@@ -1,4 +1,4 @@
-import { PlayArrow } from '@mui/icons-material';
+import { Edit, PlayArrow, Upload } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -7,7 +7,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import React from 'react';
-import { isTrackUpdating, secondsToHMS, Track } from '../types';
+import { isTrackUpdating, secondsToHMS, Song, Track } from '../types';
 import { Button, CircularProgress, IconButton, Stack, styled, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
@@ -19,8 +19,16 @@ import DownloadZipButton from './DownloadZipButton';
  * This component is intended to be included in the song page, not to be an independent page.
  */
 
+export interface AddTrackDialogProps {
+    song: Song,
+    isOpen: boolean,
+    existingTracks: Track[],
+    targetTrackId?: string,
+    onClose: (success: boolean) => void
+}
+
 interface TrackListProps {
-    songId: string;
+    song: Song;
     title: string;
     typeColumns: GridColDef[];
     fetchTracks: (songId: string) => Promise<Track[]>;
@@ -30,8 +38,7 @@ interface TrackListProps {
     onFoundSelected: (track: Track) => void;
     canDelete: (track: Track) => boolean;
     playButtonPath: string;
-    // Add action: either a callback or a path to go to
-    onAdd?: () => void;
+    addDialog: (props: AddTrackDialogProps) => JSX.Element;
 }
 
 const TableHeader = styled('div')(({ theme }) => ({
@@ -89,7 +96,7 @@ function renderUpdatedCell(params: GridRenderCellParams<Track>) {
 }
 
 export function TrackList({ 
-    songId,
+    song,
     title,
     typeColumns, 
     fetchTracks, 
@@ -97,22 +104,29 @@ export function TrackList({
     onFoundSelected,
     playButtonPath,
     canDelete,
-    onAdd,
+    addDialog,
 }: TrackListProps) {
 
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
     const [tracks, setTracks] = React.useState<Array<Track>>([]);
+    const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+    const [addDialogTargetTrackId, setAddDialogTargetTrackId] = React.useState<string|null>(null)
     const navigate = useNavigate();
     const dialogs = useDialogs();
     const backend = useBackend();
-    const songClient = backend.song(songId)
+    const songClient = backend.song(song.id)
 
     const idProp = 'trackId';
 
     const handleDownload = React.useCallback((row) => () => {
         download(row.mediaUrl)
     }, []);
+
+    const handleUpload = React.useCallback((row) => () => {
+        setAddDialogTargetTrackId(row.trackId)
+        setIsAddDialogOpen(true)
+    }, [])
     
     const handleRowDelete = React.useCallback((row: Track) => async() => {
         if (canDelete(row)) {
@@ -170,6 +184,13 @@ export function TrackList({
                         onClick={handleDownload(row)}
                     />,
                     <GridActionsCellItem
+                        key="download-item"
+                        icon={<Edit />}
+                        label="Download"
+                        disabled={!row.mediaUrl}
+                        onClick={handleUpload(row)}
+                        />,
+                    <GridActionsCellItem
                         key="delete-item"
                         icon={<DeleteIcon />}
                         label="Delete"
@@ -178,14 +199,14 @@ export function TrackList({
                     />,
                 ]},
             },
-        ])), [handleDownload, handleRowDelete, canDelete]);
+        ])), [handleDownload, handleUpload, handleRowDelete, canDelete]);
 
     const loadData = React.useCallback(async () => {
         setError(null);
         setIsLoading(true);
 
         try {
-            const fetchedTracks = await fetchTracks(songId);
+            const fetchedTracks = await fetchTracks(song.id);
             setTracks(fetchedTracks)
             findSelectedTrack();
         } catch (listDataError) {
@@ -200,12 +221,14 @@ export function TrackList({
     }, [isLoading, loadData])
 
     const handleAdd = React.useCallback(async () => {
-        onAdd()
-        // const created = await onAdd();
-        // if (created) {
-        //     loadData();
-        // }
-    }, [onAdd, loadData])
+        setAddDialogTargetTrackId(null)
+        setIsAddDialogOpen(true)
+    }, [setIsAddDialogOpen])
+
+    const handleAddClose = React.useCallback(() => { 
+        setIsAddDialogOpen(false)
+        setAddDialogTargetTrackId(null)
+    }, [setIsAddDialogOpen])
 
     function findSelectedTrack() {
         if (!selected || isLoading) { return; }
@@ -221,6 +244,7 @@ export function TrackList({
 
     return (
         <Stack direction="column">
+            {addDialog({ isOpen: isAddDialogOpen, song: song, existingTracks: tracks, targetTrackId: addDialogTargetTrackId, onClose: handleAddClose })}
             <TableHeader>
                 <Typography variant="h6">{title}</Typography>
                 <TableToolbar>
@@ -231,7 +255,7 @@ export function TrackList({
                         </IconButton>}
                     </Tooltip>
                     <DownloadZipButton 
-                        songId={songId}
+                        songId={song.id}
                         trackIds={tracks.map(t => t.trackId)}
                     />
                     <Button 

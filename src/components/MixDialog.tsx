@@ -1,16 +1,16 @@
 import React from "react";
-import { Song } from "../types";
+import { Song, Track } from "../types";
 import { BulkMixDialog } from "./BulkMixDialog";
 import { SingleMixDialog } from "./SingleMixDialog";
+import { AddTrackDialogProps } from "./TrackList";
 
-export interface MixDialogProps {
-    song: Song,
-    onClose: (success: boolean) => void
-}
+export type AddMixDialogProps = AddTrackDialogProps & { onSwitchMode: () => void }
 
-export function MixDialog({song, onClose}: MixDialogProps) {
+export function MixDialog(props: AddTrackDialogProps) {
     const [bulkMode, setBulkMode] = React.useState(false)
 
-    return bulkMode ? <BulkMixDialog song={song} onClose={onClose} onSwitchToSingle={() => setBulkMode(false)}/>
-                    : <SingleMixDialog song={song} onClose={onClose} onSwitchToBulk={() => setBulkMode(true)}/>
+    return props.isOpen && (
+        (bulkMode && !props.targetTrackId) 
+            ? <BulkMixDialog onSwitchMode={() => setBulkMode(false)} {...props}/>
+            : <SingleMixDialog onSwitchMode={() => setBulkMode(true)} {...props}/>)
 }

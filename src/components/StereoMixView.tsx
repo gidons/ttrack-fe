@@ -10,10 +10,12 @@ import { OutlinedInput } from '@mui/material';
 export interface StereoMixViewProps {
     mix: StereoMix;
     isEditable?: boolean;
+    onMixChange?: (mix: StereoMix) => void
 }
 
-export default function StereoMixView({ mix: { name, spec, parts }, isEditable = false }: StereoMixViewProps) {
+export default function StereoMixView({ mix, isEditable = false, onMixChange }: StereoMixViewProps) {
     // console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
+    const { spec, parts } = mix
     const [left, setLeft] = React.useState(spec.leftFactors ?? []);
     const [right, setRight] = React.useState(spec.rightFactors ?? []);
 
@@ -54,7 +56,10 @@ export default function StereoMixView({ mix: { name, spec, parts }, isEditable =
         } else {
             setRight(f => updateFactors(f, partIndex, value));
         }
-    }, [setLeft, setRight]);
+        if (onMixChange) {
+            onMixChange({ ...mix, spec: { leftFactors: left, rightFactors: right }})
+        }
+    }, [setLeft, setRight, onMixChange, mix]);
 
     interface CompactTextInputProps { value: string }
     function CompactTextInput({value} : CompactTextInputProps) {

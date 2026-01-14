@@ -4,12 +4,13 @@ import { Box, Checkbox, FormControlLabel, Grid, MenuItem, Select, Stack, TextFie
 import { ValueSpinner } from "./ValueSpinner";
 import { M } from "@clerk/clerk-react/dist/useAuth-fq1pQd_y";
 import { CheckBox } from "@mui/icons-material";
+import { displayKeyValue, FLAT_SYM, SHARP_SYM } from "./utils";
 
 export type KeyFieldSpec = FormFieldSpec
 export type KeyFieldProps = KeyFieldSpec & FormFieldState
 
 export default function KeyField(props: KeyFieldProps) {
-    const { initialValue, name, displayName, smSize, onChange, error, key, editable } = props
+    const { initialValue, name, displayName, smSize, onChange, key, editable } = props
     const [value, setValue] = React.useState(initialValue)
     return (
         <Grid size={{ xs: 12, sm: smSize }} sx={editable ? { display: 'flex' } : {}} key={key}>
@@ -21,7 +22,7 @@ export default function KeyField(props: KeyFieldProps) {
                 displayName={displayName}
             />
             ) : (
-                TextDisplayField({ ...props, initialValue: value })
+                TextDisplayField({ ...props, initialValue: displayKeyValue(value) })
             )}
         </Grid>
     )
@@ -35,7 +36,7 @@ interface KeyEditorProps {
 }
 function KeyEditor({value, name, displayName, onChange}: KeyEditorProps) {
     const pattern = /([A-G])([#b]?)(m?)/
-    const [match, letter, accidental, mode] = (value.match(pattern) || ['','','',''])
+    const [, letter, accidental, mode] = (value.match(pattern) || ['','','',''])
     console.log(`KeyEditor: value=${value} letter=${letter}`)
 
     const handleLetterChange = React.useCallback((newLetter: string) => {
@@ -73,13 +74,13 @@ function KeyEditor({value, name, displayName, onChange}: KeyEditorProps) {
             </Grid>
             <Grid size={1} sx={{}} >
                 <Stack>
-                    <FormControlLabel label="♯"
+                    <FormControlLabel label={SHARP_SYM}
                         control={
                         <Checkbox sx={{padding: 0}}
                             checked={accidental == '#'}
                             onChange={(e) => handleAccidentalChange(e.target.checked ? "#" : "")}/>}
                     />
-                    <FormControlLabel label="♭"
+                    <FormControlLabel label={FLAT_SYM}
                         control={
                         <Checkbox sx={{padding: 0}}
                             checked={accidental == 'b'} 

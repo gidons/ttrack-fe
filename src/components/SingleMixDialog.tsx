@@ -1,27 +1,31 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { fullMixForParts, NULL_STEREO_MIX, Song, StereoMix } from "../types";
+import { fullMixForParts, MixTrack, NULL_STEREO_MIX, Song, stereoMix, StereoMix, Track } from "../types";
 import StereoMixView from "./StereoMixView";
 import { useBackend } from "../backend/useBackend";
+import { AddMixDialogProps } from "./MixDialog";
 
-export interface SingleMixDialogProps {
-    song: Song,
-    onSwitchToBulk: () => void,
-    onClose: (success: boolean) => void
-}
-
-export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialogProps) {
+export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMode, onClose} : AddMixDialogProps) {
     console.log(`SingleMixDialog: start render; song=${song?.id}`);
 
     const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: "custom"};
 
+    // Is this an edit of an existing track or creation of a new track?
+    const isEdit = !!targetTrackId
+    const targetTrack = existingTracks.find(t => t.trackId == targetTrackId) as (MixTrack | null)
+    const editError = (isEdit && !targetTrack) ? new Error(`Track ${targetTrackId} not found. Please refresh the page.`) : null
+
     const [isLoading, setIsLoading] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
-    const [error, setError] = React.useState<Error>(null);
+    const [error, setError] = React.useState<Error>(editError);
     const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
     const [existingMixNames, setExistingMixNames] = React.useState(new Set<string>())
-    const [currentMix, setCurrentMix] = React.useState<StereoMix>(INITIAL_CUSTOM_MIX);
-    const [customTrackName, setCustomTrackName] = React.useState('Custom');
+    const [currentMix, setCurrentMix] = React.useState<StereoMix>(
+        targetTrack?.mix ?? INITIAL_CUSTOM_MIX
+    );
+    const [customTrackName, setCustomTrackName] = React.useState(
+        targetTrack?.mix.name ?? 'Custom'
+    );
     const [isCustomMix, setIsCustomMix] = React.useState(true);
 
     const backend = useBackend()
@@ -38,12 +42,14 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     [setDefaultMixes, setExistingMixNames, setCurrentMix, setCustomTrackName, setIsCustomMix])
 
     const loadData = React.useCallback(async () => {
-        if (!song) { return }
+        if (!song || isEdit) { return }
         console.log(`Loading dialog data for song ${song.id}`);
         setIsLoading(true)
         try {
             const parts = await songClient.listParts();
-            setCurrentMix(fullMixForParts("custom", parts.map(pt => pt.part)))
+            if (currentMix.parts.length != parts.length) {
+                setCurrentMix(fullMixForParts("custom", parts.map(pt => pt.part)))
+            }
             const fetchedMixes = await songClient.listMixes();
             console.log(`Existing mix names: ${[...existingMixNames].join()}`);
             setExistingMixNames(new Set(fetchedMixes.map(m => m.mix.name)))
@@ -55,7 +61,7 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
         } finally {
             setIsLoading(false)
         }
-    }, [song, setDefaultMixes, setError]);
+    }, [song, isEdit, setDefaultMixes, setError]);
 
     React.useEffect(() => { 
         loadData() 
@@ -71,7 +77,7 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     const handleSelectedMixChange = React.useCallback(
         (e: SelectChangeEvent<HTMLSelectElement>) => {
             const selectedMixName = e.target.value.toString();
-            console.log(`Mix name changed to '${selectedMixName}'`)
+            // console.log(`Mix name changed to '${selectedMixName}'`)
             if (selectedMixName == 'custom') {
                 // TODO generate full mix locally
                 const fullMix = defaultMixes.find((m) => m.name == 'Full Mix');
@@ -102,7 +108,7 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
         console.log("Creating track with mix: " + JSON.stringify(mix));
         try {
             setIsSubmitting(true)
-            const created = await songClient.createMix(mix, isCustomMix);
+            const created = await songClient.createMix(mix, isCustomMix, isEdit);
             console.log("Created track: " + JSON.stringify(created));
             onClose(true)
             reset()
@@ -117,20 +123,22 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
     return (
         <Stack spacing={1}>
             <Typography variant="h6">Create new mix for <em>{song?.title??"..."}</em></Typography>
-            <Link onClick={onSwitchToBulk}>Switch to Bulk Mode</Link>
+            {isEdit || <Link onClick={onSwitchMode}>Switch to Bulk Mode</Link>}
             {error && (
                 <Box sx={{ flexGrow: 1 }}>
                     <Alert severity="error">{error.message}</Alert>
                 </Box>)}
             <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', padding: 1 }}>
+                {!isEdit && 
                 <FormControl fullWidth>
                     <InputLabel id="mix-name-label">Mix</InputLabel>
                     <Select
-                        value={currentMix?.name ?? ''}
+                        value={currentMix?.name ?? 'custom'}
                         onChange={handleSelectedMixChange as SelectProps['onChange']}
                         labelId="mix-name-label"
                         name="mix"
                         label="Mix"
+                        disabled={isEdit}
                         fullWidth
                     >
                         {defaultMixes
@@ -140,14 +148,14 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
                         )}
                         <MenuItem value="custom">Custom</MenuItem>
                     </Select>
-                </FormControl>
+                </FormControl>}
                 <FormControl fullWidth>
                     <TextField 
                         name='trackName'
                         value={isCustomMix ? customTrackName : currentMix.name}
                         aria-label='Track Name'
                         label='Track Name'
-                        disabled={!isCustomMix}
+                        disabled={!isCustomMix || isEdit}
                         onChange={handleTrackNameChange}
                     />
                 </FormControl>
@@ -163,11 +171,15 @@ export function SingleMixDialog({song, onSwitchToBulk, onClose} : SingleMixDialo
                     disabled={isLoading /* || !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">
-                    Create
+                    {isEdit ? "Save" : "Create"}
                 </Button>
             </DialogActions>
             {/* Note: each mix view has to have its own key to allow for separate states. */}
-            <StereoMixView key={`stereomix-view-${currentMix?.name ?? 'null'}`} mix={currentMix} isEditable={isCustomMix}/>
+            <StereoMixView 
+                key={`stereomix-view-${currentMix?.name ?? 'null'}`} 
+                mix={currentMix} 
+                isEditable={isCustomMix}
+                onMixChange={setCurrentMix}/>
         </Stack>
     )
 

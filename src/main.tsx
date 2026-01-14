@@ -32,8 +32,8 @@ root.render(
               <Route index element={<Welcome/>}/>
               <Route path="songs" element={<ProtectedContent/>}>
                 <Route index element={<SongList/>}/>
-                <Route path="new" element={<CreateSong/>}/>
                 <Route path=":songId" element={<ViewSong/>}/>
+                <Route path=":songId/edit" element={<ViewSong/>}/>
                 <Route path=":songId/part/:part" element={<ViewSong/>}/>
                 <Route path=":songId/mix/:mixName" element={<ViewSong/>}/>
               </Route>

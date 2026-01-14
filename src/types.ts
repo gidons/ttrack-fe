@@ -44,8 +44,8 @@ export interface Voicing {
 export const STD_VOICING_LIST: Array<Voicing> = [
   { name: "BB", displayName: "TLBB", parts: ["Tenor", "Lead", "Bari", "Bass"] },
   { name: "TTBB", displayName: "TTBB", parts: ["Tenor1", "Tenor2", "Bari", "Bass"] },
-  { name: "SSAA", displayName: "SSAA", parts: ["Tenor", "Lead", "Bari", "Bass"] },
-  { name: "SATB", displayName: "SATB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2"] },
+  { name: "SATB", displayName: "SATB", parts: ["Soprano", "Alto", "Tenor", "Bass"] },
+  { name: "SSAA", displayName: "SSAA", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2"] },
   { name: "SSAATTBB", displayName: "SSAATTBB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2", "Tenor1", "Tenor2", "Bari", "Bass"] },
   { name: "CUSTOM", displayName: "Custom", parts: [] }
 ]

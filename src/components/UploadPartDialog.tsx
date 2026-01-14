@@ -1,35 +1,49 @@
-import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField } from "@mui/material";
+import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { Song, STD_VOICING_LIST } from "../types";
 import { useBackend } from "../backend/useBackend";
+import { isPartTrack, STD_VOICING_LIST, Track } from "../types";
+import { AddTrackDialogProps } from "./TrackList";
 
-export interface UploadPartDialogProps {
-    song: Song,
-    onClose: (success: boolean) => void
-}
+export function UploadPartDialog({ song, isOpen, existingTracks, targetTrackId, onClose } : AddTrackDialogProps) {
+    interface UploadRow {
+        selectedPartName: string,
+        customPartName: string,
+        isCustomPart: boolean,
+        audioFile: File
+    }
 
-export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
+    const isEdit = !!targetTrackId
+    const targetTrack: Track | null = existingTracks.find(t => t.trackId == targetTrackId)
+    const editError = (isEdit && !targetTrack) ? new Error(`Track ${targetTrackId} not found. Please refresh the page.`) : null
+
+    const CUSTOM_PART_NAME = "custom"
+    const EMPTY_CUSTOM_ROW: UploadRow = { selectedPartName: CUSTOM_PART_NAME, customPartName: "", isCustomPart: true, audioFile: null }
+
     const defaultParts = React.useMemo(() =>
         STD_VOICING_LIST.find(v => v.name == song.voicing)?.parts || []
     , [song]);
-    const [error, setError] = React.useState<Error>(null);
-    // TODO add loadData() that gets the existing parts
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [error, setError] = React.useState<Error>(editError);
     const [isSubmitting, setIsSubmitting] = React.useState(false)
-    // Each row: { selectedPartName, customPartName, isCustomPart, audioFile }
-    const [rows, setRows] = React.useState([
-        { selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }
-    ]);
+    const existingParts = existingTracks.filter(isPartTrack).map(t => t.trackId)
+    const missingParts = defaultParts.filter(p => !existingParts.includes(p))
+    // console.log(`existingParts: ${existingParts}; missingParts: ${missingParts}; targetTrack: ${targetTrack?.trackId ?? "null"}`)
+    const [rows, setRows] = React.useState<UploadRow[]>([EMPTY_CUSTOM_ROW]);
     const backend = useBackend()
     const songClient = backend.song(song.id)
 
     const reset = React.useCallback(() => {
-        setRows([{ selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }])
+        setRows([EMPTY_CUSTOM_ROW])
     }, [setRows])
 
-    const loadData = React.useCallback(() => {}, [setIsLoading])
-
-    React.useEffect(() => loadData(), [])
+    React.useEffect(() => {
+        if (targetTrack) {
+            setRows([{ selectedPartName: targetTrack.trackId, customPartName: "", isCustomPart: false, audioFile: null }])
+        } else if (missingParts.length > 0) {
+            setRows(missingParts.map(p => ({ selectedPartName: p, customPartName: "", isCustomPart: false, audioFile: null })))
+        } else {
+            setRows([EMPTY_CUSTOM_ROW])
+        }
+    }, [song, isOpen, existingTracks, targetTrackId, setRows])
 
     // Handlers for each row
     const handleSelectedPartChange = (rowIdx: number) => (e: SelectChangeEvent<HTMLSelectElement>) => {
@@ -53,9 +67,9 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
         setRows(rows => rows.map((row, idx) => idx === rowIdx ? { ...row, audioFile: selectedFile } : row));
     };
 
-    const handleAddRow = () => {
+    const handleAddRow = React.useCallback(() => {
         setRows(rows => [...rows, { selectedPartName: "", customPartName: "", isCustomPart: false, audioFile: null }]);
-    };
+    }, [setRows]);
 
     const handleRemoveRow = (rowIdx: number) => {
         setRows(rows => rows.filter((_, idx) => idx !== rowIdx));
@@ -81,10 +95,13 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
         }
     }, [song, rows, onClose, reset]);
     
-    console.log(`Default parts: ${JSON.stringify(defaultParts)}`)
+    const isValid = React.useCallback(() => {
+        return rows.filter(r => r.audioFile != null).length > 0
+    }, [rows])
 
-    return (
+    return isOpen && (
         <Stack spacing={2}>
+            <Typography variant="h6">Upload {isEdit ? "updated" : "new"} part audio</Typography>
             {error && (
                 <Box sx={{ flexGrow: 1 }}>
                     <Alert severity="error">{error.message}</Alert>
@@ -92,24 +109,33 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
             {rows.map((row, idx) => (
                 <Grid key={idx} container spacing={2} alignItems="center" sx={{ padding: 1 }}>
                     <Grid size={{ xs: 4, sm: 3 }}>
+                      {isEdit ? 
+                        <TextField
+                                value={row.selectedPartName}
+                                disabled={true}
+                                name="defaultPart"
+                                label="Part"
+                                fullWidth/>
+                        :
                         <FormControl fullWidth>
                             <InputLabel required id={`part-selector-label-${idx}`}>Part</InputLabel>
                             <Select
-                                value={row.selectedPartName ?? ''}
+                                value={row.selectedPartName ?? CUSTOM_PART_NAME}
                                 onChange={handleSelectedPartChange(idx) as SelectProps['onChange']}
                                 labelId={`part-selector-label-${idx}`}
                                 name="defaultPart"
                                 label="Part"
                                 fullWidth
                             >
-                                {defaultParts.map((part) => 
+                                {missingParts.map((part) => 
                                     <MenuItem key={part} value={part}>{part}</MenuItem>
                                 )}
-                                <MenuItem value="custom">Custom</MenuItem>
+                                <MenuItem value={CUSTOM_PART_NAME}>Custom</MenuItem>
                             </Select>
                         </FormControl>
+                      }
                     </Grid>
-                    { row.isCustomPart ? (<Grid size={{ xs: 4, sm: 3 }}>
+                    { row.isCustomPart && (<Grid size={{ xs: 4, sm: 3 }}>
                         <FormControl fullWidth>
                             <TextField 
                                 name='partName'
@@ -120,7 +146,7 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
                                 onChange={handleCustomPartNameChange(idx)}
                             />
                         </FormControl>
-                    </Grid>) : <div/>}
+                    </Grid>)}
                     <Grid size={row.isCustomPart ? { xs: 4, sm: 5 } : { xs: 8, sm: 7 }}>
                         <FormControl fullWidth>
                             <Input
@@ -130,12 +156,10 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
                             />
                         </FormControl>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 1 }} sx={{ display: 'flex', alignItems: 'center', gap: 1 } }>
-                        <button type="button" onClick={handleAddRow} aria-label="Add row" style={{ marginRight: 8 }}>+</button>
-                        {idx > 0 && (
-                            <button type="button" onClick={() => handleRemoveRow(idx)} aria-label="Remove row">x</button>
-                        )}
-                    </Grid>
+                    {isEdit || <Grid size={{ xs: 12, sm: 1 }} sx={{ display: 'flex', alignItems: 'center', gap: 1 } }>
+                        {rows.length > 1 && <button type="button" onClick={() => handleRemoveRow(idx)} aria-label="Remove row">x</button>}
+                        {(idx == rows.length - 1) && <button type="button" onClick={handleAddRow} aria-label="Add row" style={{ marginRight: 8 }}>+</button>}
+                    </Grid>}
                 </Grid>
             ))}
             <DialogActions sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
@@ -146,7 +170,7 @@ export function UploadPartDialog({ song, onClose } : UploadPartDialogProps) {
                     variant="contained"
                     color="primary"
                     loading={isSubmitting}
-                    disabled={isLoading /* || !isValid()*/} 
+                    disabled={!isValid()} 
                     onClick={handleSubmit}
                     type="submit">
                     Create
