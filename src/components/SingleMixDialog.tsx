@@ -1,6 +1,6 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { fullMixForParts, MixTrack, NULL_STEREO_MIX, Song, stereoMix, StereoMix, Track } from "../types";
+import { fullMixForParts, MixTrack, NULL_STEREO_MIX, StereoMix } from "../types";
 import StereoMixView from "./StereoMixView";
 import { useBackend } from "../backend/useBackend";
 import { AddMixDialogProps } from "./MixDialog";
@@ -20,8 +20,8 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
     const [error, setError] = React.useState<Error>(editError);
     const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
     const [existingMixNames, setExistingMixNames] = React.useState(new Set<string>())
-    const [currentMix, setCurrentMix] = React.useState<StereoMix>(
-        targetTrack?.mix ?? INITIAL_CUSTOM_MIX
+    const [currentMix, setCurrentMix] = React.useState<StereoMix | null>(
+        targetTrack?.mix
     );
     const [customTrackName, setCustomTrackName] = React.useState(
         targetTrack?.mix.name ?? 'Custom'
@@ -43,11 +43,10 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
 
     const loadData = React.useCallback(async () => {
         if (!song || isEdit) { return }
-        console.log(`Loading dialog data for song ${song.id}`);
         setIsLoading(true)
         try {
             const parts = await songClient.listParts();
-            if (currentMix.parts.length != parts.length) {
+            if ((currentMix?.parts?.length ?? 0) != parts.length) {
                 setCurrentMix(fullMixForParts("custom", parts.map(pt => pt.part)))
             }
             const fetchedMixes = await songClient.listMixes();
@@ -120,10 +119,17 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
         }
     }, [song, trackName, currentMix, setIsSubmitting]);
 
+    const handleMixChange = React.useCallback((newMix) => {
+        console.log(`handleMixChange: mix=${JSON.stringify(newMix)}`)
+        setCurrentMix(newMix)
+    }, [setCurrentMix])
+
     return (
         <Stack spacing={1}>
-            <Typography variant="h6">Create new mix for <em>{song?.title??"..."}</em></Typography>
-            {isEdit || <Link onClick={onSwitchMode}>Switch to Bulk Mode</Link>}
+            <Typography variant="h6">{isEdit ? "Edit mix" : "Create a new mix"}</Typography>
+            {isEdit || (
+                <Link onClick={onSwitchMode} sx={{ cursor: 'pointer' }} role="button">Switch to Bulk Mode</Link>
+            )}
             {error && (
                 <Box sx={{ flexGrow: 1 }}>
                     <Alert severity="error">{error.message}</Alert>
@@ -175,11 +181,12 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
                 </Button>
             </DialogActions>
             {/* Note: each mix view has to have its own key to allow for separate states. */}
+            {currentMix && 
             <StereoMixView 
-                key={`stereomix-view-${currentMix?.name ?? 'null'}`} 
+                key={`stereomix-view-${currentMix.name}`} 
                 mix={currentMix} 
                 isEditable={isCustomMix}
-                onMixChange={setCurrentMix}/>
+                onMixChange={handleMixChange}/>}
         </Stack>
     )
 

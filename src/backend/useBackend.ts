@@ -141,6 +141,8 @@ export function useBackend() : Backend {
             const response = await client.post(`${this.basePath}/mixes?overwrite=${overwrite}`, {
                 name: mix.name,
                 parts: mix.parts,
+                pitchShift: mix.pitchShift,
+                speedFactor: mix.speedFactor,
                 description: isCustom ? JSON.stringify(mix.spec) : null
             });
             return mixTrackDtoToMixTrack(response.data[0]);

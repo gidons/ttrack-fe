@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import { StereoMix } from '../types';
 import { OutlinedInput } from '@mui/material';
+import { PitchAndSpeedControl } from './PitchAndSpeedControl';
 
 export interface StereoMixViewProps {
     mix: StereoMix;
@@ -15,11 +16,9 @@ export interface StereoMixViewProps {
 
 export default function StereoMixView({ mix, isEditable = false, onMixChange }: StereoMixViewProps) {
     // console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
-    const { spec, parts } = mix
-    const [left, setLeft] = React.useState(spec.leftFactors ?? []);
-    const [right, setRight] = React.useState(spec.rightFactors ?? []);
+    const { spec: { leftFactors, rightFactors }, parts, pitchShift, speedFactor } = mix
 
-    const count = Math.max(left.length, right.length, parts.length);
+    const count = Math.max(leftFactors.length, rightFactors.length, parts.length);
 
     // helper to format number to 2 decimals
     const fmt = (n: number | undefined) => (typeof n === 'number' ? n.toFixed(2) : '0.00');
@@ -51,15 +50,17 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
     }
 
     const handleFactorSliderChange = React.useCallback((isLeft: boolean, partIndex: number, value: number) => {
-        if (isLeft) {
-            setLeft(f => updateFactors(f, partIndex, value));
-        } else {
-            setRight(f => updateFactors(f, partIndex, value));
-        }
+        const newFactors = updateFactors(isLeft ? leftFactors : rightFactors, partIndex, value);
         if (onMixChange) {
-            onMixChange({ ...mix, spec: { leftFactors: left, rightFactors: right }})
+            onMixChange({ ...mix, spec: { 
+                leftFactors: isLeft ? newFactors : leftFactors, 
+                rightFactors: isLeft ? rightFactors : newFactors 
+            }})
         }
-    }, [setLeft, setRight, onMixChange, mix]);
+    }, [onMixChange, mix]);
+
+    const handlePitchChange = React.useCallback((newValue: number) => onMixChange({...mix, pitchShift: newValue}), [onMixChange, mix])
+    const handleSpeedChange = React.useCallback((newValue: number) => onMixChange({...mix, speedFactor: newValue}), [onMixChange, mix])
 
     interface CompactTextInputProps { value: string }
     function CompactTextInput({value} : CompactTextInputProps) {
@@ -96,7 +97,7 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                             <Grid container spacing={1} alignItems="center">
                                 <Grid size={8}>
                                     <Slider
-                                        value={left[i] ?? 0}
+                                        value={leftFactors[i] ?? 0}
                                         min={0}
                                         max={1}
                                         step={0.01}
@@ -106,7 +107,7 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                                         />
                                 </Grid>
                                 <Grid size={4}>
-                                    <CompactTextInput value={fmt(left[i])}/>
+                                    <CompactTextInput value={fmt(leftFactors[i])}/>
                                 </Grid>
                             </Grid>
                         </Grid>
@@ -114,7 +115,7 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                             <Grid container spacing={1} alignItems="center">
                                 <Grid size={8}>
                                     <Slider
-                                        value={right[i] ?? 0}
+                                        value={rightFactors[i] ?? 0}
                                         min={0}
                                         max={1}
                                         step={0.01}
@@ -124,12 +125,18 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                                     />
                                 </Grid>
                                 <Grid size={4}>
-                                    <CompactTextInput value={fmt(right[i])}/>
+                                    <CompactTextInput value={fmt(rightFactors[i])}/>
                                 </Grid>
                             </Grid>
                         </Grid>
                     </Grid>
                  ))}
+                 <PitchAndSpeedControl
+                    pitchShift={pitchShift}
+                    speedFactor={speedFactor}
+                    direction='row'
+                    onPitchShiftChange={handlePitchChange}
+                    onSpeedFactorChange={handleSpeedChange}/>
             </Stack>
         </Box>
     );

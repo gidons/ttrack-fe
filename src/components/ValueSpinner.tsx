@@ -4,37 +4,53 @@ import RemoveIcon from "@mui/icons-material/Remove"
 import React from "react";
 
 export interface ValueSpinnerProps<T> {
-    initialValue: T,
+    value: T,
     values: T[],
     onChange: ((T) => void),
     sx?: SxProps
 }
 
-export function ValueSpinner<T>({initialValue, values, onChange, sx}: ValueSpinnerProps<T>) {
-    const initialIndex = values.indexOf(initialValue)
-    if (initialIndex < 0) {
-        throw new TypeError(`Initial value '${initialValue}' is not in the list of allowed values: [${values.join(",")}].`)
-    }
-    const [valueIndex, setValueIndex] = React.useState(initialIndex)
+/*
+ TODO Find a way to make editing values easier.
+ With current implementation, every keystroke generates an onChange call, and if the parent
+ is doing validation, this can be frustrating. For example, PitchAndSpeedControl requires that
+ the pitch be a number, but "-" is not a number, so entering "-3" is tricky.
+ Possible approach:
+ - Add text value as state
+ - In handleChange, only change the state but don't propagate to parent
+ - Add onBlur and propage to parent
+*/
+export function ValueSpinner<T>({value, values, onChange, sx}: ValueSpinnerProps<T>) {
+    const valueIndex = values.indexOf(value)
+    const isInvalidValue = (valueIndex < 0)
 
-    const currentValue = React.useMemo(() => values[valueIndex], 
-        [values, valueIndex])
+    if (isInvalidValue) {
+        // throw new TypeError(`Initial value '${initialValue}' is not in the list of allowed values: [${values.join(",")}].`)
+        console.warn(`Initial value '${value}' is not in the list of allowed values; using text field instead.`)
+    }
 
     const handleIncrement = React.useCallback(() => {
-        setValueIndex(i => Math.min(i + 1, values.length - 1))
-        onChange(currentValue)
-    }, [setValueIndex, onChange])
+        const newIndex = Math.min(valueIndex + 1, values.length - 1);
+        // console.log(`ValueSpinner.handleIncrement: ${values[newIndex]}`)
+        onChange(values[newIndex])
+    }, [valueIndex, onChange])
     
     const handleDecrement = React.useCallback(() => {
-        setValueIndex(i => Math.max(i - 1, 0))
-        onChange(currentValue)
-    }, [setValueIndex])
+        const newIndex = Math.max(valueIndex - 1, 0);
+        // console.log(`ValueSpinner.handleDecrement: ${values[newIndex]}`)
+        onChange(values[newIndex])
+    }, [valueIndex, onChange])
+
+    const handleTextChange = React.useCallback((e) => {
+        onChange(e.target.value)
+    }, [onChange])
 
     return (
     <Stack direction={"row"} spacing={0} sx={sx}>
         <Button
             onClick={handleDecrement}
             sx={{minWidth: 32}}
+            disabled={isInvalidValue}
         >
             <RemoveIcon/>
         </Button>
@@ -44,12 +60,14 @@ export function ValueSpinner<T>({initialValue, values, onChange, sx}: ValueSpinn
                     sx: { textAlign: "center" },
                 }
             }}
-            contentEditable={false}
-            value={currentValue}
+            onChange={handleTextChange}
+            contentEditable={isInvalidValue ? null : false}
+            value={value}
         />
         <Button
             onClick={handleIncrement}
             sx={{minWidth: 32}}
+            disabled={isInvalidValue}
         >
             <AddIcon/>
         </Button>

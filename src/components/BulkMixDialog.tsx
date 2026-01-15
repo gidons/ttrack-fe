@@ -6,6 +6,7 @@ import { useBackend } from "../backend/useBackend";
 import { MixTrack, STD_MIX_TYPES } from "../types";
 import { AddMixDialogProps } from "./MixDialog";
 import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
+import { toJson } from "./utils";
 
 export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProps) {
     // console.log("BulkMixDialog: start render");
@@ -15,8 +16,10 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
     const [error, setError] = React.useState<Error>(null);
     const [parts, setParts] = React.useState(new Array<string>())
     const [existingMixes, setExistingMixes] = React.useState(new Array<MixTrack>());
-    const [selectedMixNames, setSelectedMixNames] = React.useState<TreeViewItemId[]>([]);
+    const [userAddedMixLabels, setUserAddedMixLabels] = React.useState<TreeViewItemId[]>([]);
     const [packageDesc, setPackageDesc] = React.useState('');
+    const [pitchShift, setPitchShift] = React.useState(0)
+    const [speedFactor, setSpeedFactor] = React.useState(1)
 
     const parentNodeNames = STD_MIX_TYPES.filter(t => t != 'Full Mix');
     const songClient = useBackend().song(song.id)
@@ -29,68 +32,53 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
             setParts(partNames)
             const fetchedMixes = await songClient.listMixes();
             setExistingMixes(fetchedMixes);
-            const fetchedNames = fetchedMixes.map(m => m.mix.name);
-            const selectedNames = [...(new Set<string>([...selectedMixNames, ...fetchedNames]))];
-            setSelectedMixNames(selectedNames)
         } catch (fetchError) {
             setError(fetchError as Error);
         } finally {
             setIsLoading(false)
             setIsSubmitting(false)
         }
-    }, [song, setIsLoading, setParts, setError, setExistingMixes, setSelectedMixNames]);
+    }, [song, setIsLoading, setParts, setError, setExistingMixes]);
+
+    const mixLabelToName = React.useCallback((name: string) => `${name}${packageDesc ? " " + packageDesc : ""}`, [packageDesc])
+    const mixNameToLabel = React.useCallback((name: string) => packageDesc ? name.replace(" " + packageDesc, "") : name, [packageDesc])
 
     const existingMixNames = React.useMemo(() => existingMixes.map(t => t.mix.name), [existingMixes])
+    const userAddedMixNames = userAddedMixLabels.map(mixLabelToName)
+    const selectedMixNames = [...(new Set<string>([...userAddedMixNames, ...existingMixNames]))]
+    // console.log(`userAddedMixNames: ${toJson(userAddedMixNames)}`)
 
     React.useEffect(() => { loadData() }, [loadData])
 
-    const mixTree = STD_MIX_TYPES.flatMap(type => {
+    const mixTree = React.useMemo(() => STD_MIX_TYPES.flatMap(type => {
         return [{
-            id: type,
+            id: mixLabelToName(type),
             label: type,
             children: (type != 'Full Mix') ? parts.map(part => {
-                const name = `${part} ${type}`
+                const label = `${part} ${type}`
                 return { 
-                    id: name, 
-                    label: name, 
+                    id: mixLabelToName(label), 
+                    label: label, 
                 }
             }) : []
         }]
-    })
-
-    // Map of parent id -> children ids for quick lookup
-    const parentToChildren = React.useMemo(() => {
-        const map = new Map<string, string[]>();
-        mixTree.forEach(node => {
-            if (node.children && node.children.length > 0) {
-                map.set(node.id, node.children.map(c => c.id));
-            }
-        });
-        return map;
-    }, [mixTree]);
-
-    // Controlled selection handler: when a parent is selected, add its children to state
-    const handleSelectedItemsChange = React.useCallback((event: React.SyntheticEvent | null, itemIds: TreeViewItemId[] | TreeViewItemId) => {
-        // Normalize incoming ids to an array
-        const incoming: TreeViewItemId[] = Array.isArray(itemIds) ? itemIds : (itemIds ? [itemIds] : []);
-
-        // Build state-only selection where parents are replaced by their children
-        const nextSet = new Set<string>(existingMixNames);
-        incoming.forEach(id => {
-            const children = parentToChildren.get(id);
-            nextSet.add(id);
-            if (children && children.length > 0) {
-                // Parent selected: add all children (do not add the parent itself)
-                children.forEach(c => nextSet.add(c));
-            }
-        });
-
-        setSelectedMixNames([...nextSet]);
-    }, [parentToChildren, selectedMixNames, setSelectedMixNames]);
+    }), [mixLabelToName, parts])
 
     const handleCancel = React.useCallback(() => {
         onClose(false)
     }, [onClose]);
+
+    const handleSelectionToggle = React.useCallback((event: React.SyntheticEvent, itemId: TreeViewItemId, isSelected: boolean) => {
+        // console.log(`handleSelectionToggle: itemId=${itemId} isSelected: ${isSelected}`)
+        event.stopPropagation()
+        const itemLabel = mixNameToLabel(itemId)
+        console.log(`itemLabel='${itemLabel}'`)
+        if (isSelected) {
+            setUserAddedMixLabels((labels) => [...labels, itemLabel])
+        } else {
+            setUserAddedMixLabels((labels) => labels.filter(l => l != itemLabel))
+        }
+    }, [mixNameToLabel, setUserAddedMixLabels])
 
     const handlePackageDescChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setPackageDesc(e.target.value);
@@ -98,8 +86,11 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
 
     const handleSubmit = React.useCallback(async () => {
         // console.log(`handleSubmit: packageDesc=${packageDesc}; selectedMixNames=${JSON.stringify(selectedMixNames)}`);
-        const mixDescriptions = selectedMixNames.filter(n => !parentNodeNames.includes(n) && !existingMixNames.includes(n))
-        console.log(`Mixes to create: ${mixDescriptions.join(",")}`)
+        const mixDescriptions = selectedMixNames
+            .filter(n => !existingMixNames.includes(n))
+            .map(mixNameToLabel)
+            .filter(n => !parentNodeNames.includes(n))
+        console.log(`Mixes to create for package '${packageDesc}': ${mixDescriptions.join(",")}`)
         // TODO handle errors
         setIsSubmitting(true)
         try {
@@ -107,19 +98,19 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
                 parts, 
                 mixDescriptions, 
                 packageDescription: packageDesc.trim() || null, 
-                speedFactor: 1, 
-                pitchShift: 0 
+                speedFactor: speedFactor, 
+                pitchShift: pitchShift 
             })
             onClose(true)
         } finally {
             setIsSubmitting(false)
         }
-    }, [packageDesc, selectedMixNames, setIsSubmitting]);
+    }, [packageDesc, selectedMixNames, speedFactor, pitchShift, setIsSubmitting]);
 
     return (
         <Stack spacing={1}>
-            <Typography variant="h6">Create new mix package</Typography>
-            <Link onClick={onSwitchMode}>Switch to Single Mode</Link>
+            <Typography variant="h6">Create or edit a mix package</Typography>
+            <Link onClick={onSwitchMode} sx={{ cursor: 'pointer' }} role="button">Switch to Single Mode</Link>
             {error && (
                 <Box sx={{ flexGrow: 1 }}>
                     <Alert severity="error">{error.message}</Alert>
@@ -143,7 +134,7 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
                         multiSelect={true}
                         // Controlled selection: what the tree shows (may include parent ids)
                         selectedItems={selectedMixNames}
-                        onSelectedItemsChange={handleSelectedItemsChange}
+                        onItemSelectionToggle={handleSelectionToggle}
                         sx={{
                             // Target the TreeItem content when selected and force transparent background so
                             // selection doesn't change the item's background. We scope to classes used by MUI TreeItem.
@@ -155,7 +146,11 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
                     />
                 </Stack>
                 <Stack>
-                    <PitchAndSpeedControl/>
+                    <PitchAndSpeedControl
+                        pitchShift={pitchShift}
+                        speedFactor={speedFactor}
+                        onPitchShiftChange={(v) => { console.log(`Setting pitchShift to ${v}`); setPitchShift(v) }}
+                        onSpeedFactorChange={(v) => { console.log(`Setting speedFactor to ${v}`); setSpeedFactor(v) }}/>
                 </Stack>
             </Stack>
             <DialogActions sx={{ padding: 1, justifyContent: 'space-between', width: '100%' }}>
