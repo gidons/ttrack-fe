@@ -15,19 +15,19 @@ import { useBackend } from '../backend/useBackend';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';
 import { STD_VOICING_LIST, stereoMix, trackName, type Song, type Track } from '../types';
-import KeyField from './KeyField';
+import KeyField from './common/KeyField';
 import { MixDialog } from './MixDialog';
-import PageContainer from './PageContainer';
-import StandardForm from './StandardForm';
-import StereoMixView from './StereoMixView';
+import PageContainer from './common/PageContainer';
+import StandardForm from './common/StandardForm';
+import StereoMixView from './common/StereoMixView';
 import { TrackList } from './TrackList';
 import { UploadPartDialog } from './UploadPartDialog';
+import SongDataList from './SongDataList';
 
 
 export default function ViewSong() {
 
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
-    // console.log("Selected: mix=%s part=%s", selectedMixName, selectedPart);
 
     const backend = useBackend();
     const songClient = backend.song(songId);
@@ -166,7 +166,8 @@ export default function ViewSong() {
                 submitButtonLabel='Save'
                 cancelButtonLabel='Cancel'
                 onSubmit={handleEditSubmit}
-                onCancel={() => { navigate(`/songs/${songId}`) }}
+                onCancel={() => { navigate(`/songs/${isNewSong ? "" : songId}`) }}
+                // TODO add validation
                 validate={(song: Partial<Song>) => { return {} }}
                 editable={isEditingSong}
                 fields={[
@@ -242,7 +243,8 @@ export default function ViewSong() {
                 spacing={2}
                 sx={{ width: '100%' }}>
                 {showTracks &&
-                <Box flexGrow='1'
+                <Stack 
+                    spacing={2}
                     sx={{ width: '50%' }}>
                     <TrackList
                         song={song as Song}
@@ -259,9 +261,10 @@ export default function ViewSong() {
                         playButtonPath={`/songs/${songId}/part/{id}`}
                         addDialog={UploadPartDialog}
                     />
-                </Box>}
+                    <SongDataList song={song as Song}/>
+                </Stack>}
                 {showTracks &&
-                <Box flexGrow='1'>
+                <Box sx={{ width: '50%' }}>
                     <TrackList
                         song={song as Song}
                         title="Mixes"

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useContext } from 'react';
 import { sleep } from '../components/utils';
-import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TrackInfo } from '../types';
+import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TimedTextData, TimedTextEntry, TrackInfo } from '../types';
 import { AuthContext } from './AuthContext';
 
 export interface MixPackageProps {
@@ -12,6 +12,14 @@ export interface MixPackageProps {
     pitchShift: number
 }
 
+export interface PartClient {
+    get: () => Promise<PartTrack>
+    getAllText: () => Promise<TimedTextData> // Will contain only data for the target part.
+    getText: (type: string) => Promise<TimedTextEntry[]>
+    putText: (type: string, entries: TimedTextEntry[]) => Promise<void>
+    uploadMedia: (audioFile: File) => Promise<PartTrack>
+}
+
 export interface SongClient {
     get: () => Promise<Song>
     update: (song: Song) => Promise<Song>
@@ -20,11 +28,15 @@ export interface SongClient {
     listParts: () => Promise<PartTrack[]>
     listMixes: () => Promise<MixTrack[]>
     listDefaultMixes: () => Promise<StereoMix[]>
+    getText: () => Promise<TimedTextData>
     uploadPart: (name: string, audioFile: File) => Promise<PartTrack>
     uploadParts: (parts: string[], files: File[]) => Promise<PartTrack[]>
     createMix: (mix: StereoMix, isCustom: boolean, overwrite: boolean) => Promise<MixTrack>
     createMixPackage: (props: MixPackageProps) => Promise<MixTrack[]>
     submitZipMixesRequest: (trackIds: string[]) => Promise<string>
+    uploadNotation: (file: File) => Promise<void>
+    deleteNotation: () => Promise<void>
+    part: (part: string) => PartClient
 }
 
 export interface Task {
@@ -41,6 +53,7 @@ export interface Backend {
     createSong: (song: Partial<Song>) => Promise<Song>
     song: (songId: string) => SongClient
     url: (path: string) => string
+    download: (url: string) => Promise<string>
     waitForTask: (taskId: string) => Promise<Task>
 }
 
@@ -80,6 +93,38 @@ export function useBackend() : Backend {
         return { ...trackDtoToTrack(others), mix: mixDtoToMix(mixInfo) };
     }
 
+    class PartClientImpl implements PartClient {
+        readonly part: string
+        readonly songId: string
+        readonly basePath: string
+        constructor(songId: string, part: string) {
+            this.songId = songId
+            this.part = part
+            this.basePath = `/songs/${this.songId}/parts/${this.part}`
+        }
+        async get() {
+            const response = await client.get(this.basePath)
+            return partTrackDtoToPartTrack(response.data)
+        }
+        async getAllText() {
+            const response = await client.get(`${this.basePath}/text`)
+            return new TimedTextData(response.data)
+        }
+        async getText(type: string) {
+            const response = await client.get(`${this.basePath}/text/${type}`)
+            return response.data
+        }
+        async putText(type: string, entries: TimedTextEntry[]) {
+            await client.put(`${this.basePath}/text/${type}`, entries)
+        }
+        async uploadMedia(audioFile: File) {
+            const formData = new FormData();
+            formData.append('audioFile', audioFile);
+            const response = await client.put(this.basePath, formData);
+            return response.data;
+        }
+    }
+
     class SongClientImpl implements SongClient {
         readonly songId: string
         readonly basePath: string
@@ -88,7 +133,7 @@ export function useBackend() : Backend {
             this.basePath = `/songs/${this.songId}`
         }
         async get() { 
-            const response = await client.get(this.basePath);
+            const response = await client.get(`${this.basePath}?extended=true`);
             return response.data
         }
         async update(song: Song) { 
@@ -115,6 +160,13 @@ export function useBackend() : Backend {
         async listDefaultMixes() {
             const response = await client.get(`${this.basePath}/defaultMixes`);
             return response.data.map(mixDtoToMix);
+        }
+        async getText() {
+            const response = await client.get(`${this.basePath}/text`);
+            return new TimedTextData(response.data)
+        }
+        part(part: string) {
+            return new PartClientImpl(this.songId, part)
         }
         async uploadPart(partName: string, audioFile: File) {
             const formData = new FormData();
@@ -156,7 +208,14 @@ export function useBackend() : Backend {
             const response = await client.post(`${this.basePath}/zip`, trackIds)
             return response.data as string // task ID
         }
-        
+        async uploadNotation(file: File) {
+            const formData = new FormData();
+            formData.append('file', file);
+            await client.put(`${this.basePath}/notation`, formData);
+        }
+        async deleteNotation() {
+            await client.delete(`${this.basePath}/notation`)
+        }
     }
 
     async function getTask(taskId: string): Promise<Task | null> {
@@ -192,6 +251,7 @@ export function useBackend() : Backend {
             return response.data;
         },
         song(songId: string) { return new SongClientImpl(songId) },
+        async download(url: string) { return (await client.get(url)).data; },
         url: getDownloadUrl,
         waitForTask: waitForTask
     }

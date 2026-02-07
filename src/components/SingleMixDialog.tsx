@@ -1,7 +1,7 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
 import { fullMixForParts, MixTrack, NULL_STEREO_MIX, StereoMix } from "../types";
-import StereoMixView from "./StereoMixView";
+import StereoMixView from "./common/StereoMixView";
 import { useBackend } from "../backend/useBackend";
 import { AddMixDialogProps } from "./MixDialog";
 

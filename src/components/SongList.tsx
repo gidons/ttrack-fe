@@ -12,7 +12,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router';
 import { Song, STD_VOICINGS } from '../types';
-import PageContainer from './PageContainer';
+import PageContainer from './common/PageContainer';
 import { useBackend } from '../backend/useBackend';
 
 

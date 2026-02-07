@@ -4,7 +4,7 @@ import Grid from '@mui/material/Grid';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
-import { StereoMix } from '../types';
+import { StereoMix } from '../../types';
 import { OutlinedInput } from '@mui/material';
 import { PitchAndSpeedControl } from './PitchAndSpeedControl';
 

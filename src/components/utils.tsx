@@ -31,6 +31,13 @@ export function topLevelObj(o: object) {
   return `{ ${Object.keys(o).map(k => `${k}: ${o[k]}`).join(", ") }`
 }
 
+export function pick<V, T extends Record<string, V>, U extends keyof(T)>(obj: object, keys: readonly string[]): Record<U, V> {
+  const objE = Object.entries(obj)
+  const filtered = objE.filter(e => keys.includes(e[0]))
+  const rec = Object.fromEntries(filtered)
+  return rec as Record<U, V>
+}
+
 export function toJson(o: object) {
   const circularReplacer = () => {
     const seen = new WeakSet();

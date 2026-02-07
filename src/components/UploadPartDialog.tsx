@@ -3,6 +3,7 @@ import React from "react";
 import { useBackend } from "../backend/useBackend";
 import { isPartTrack, STD_VOICING_LIST, Track } from "../types";
 import { AddTrackDialogProps } from "./TrackList";
+import { useNavigate } from "react-router";
 
 export function UploadPartDialog({ song, isOpen, existingTracks, targetTrackId, onClose } : AddTrackDialogProps) {
     interface UploadRow {
@@ -29,6 +30,7 @@ export function UploadPartDialog({ song, isOpen, existingTracks, targetTrackId, 
     // console.log(`existingParts: ${existingParts}; missingParts: ${missingParts}; targetTrack: ${targetTrack?.trackId ?? "null"}`)
     const [rows, setRows] = React.useState<UploadRow[]>([EMPTY_CUSTOM_ROW]);
     const backend = useBackend()
+    const navigate = useNavigate()
     const songClient = backend.song(song.id)
 
     const reset = React.useCallback(() => {

@@ -73,6 +73,7 @@ export default function SongForm(props: SongFormProps) {
     }, [formValues, onReset]);
 
     const handleBack = React.useCallback(() => {
+        console.log(`navigate(${backButtonPath})`)
         navigate(backButtonPath ?? '/songs');
     }, [navigate, backButtonPath]);
 

@@ -3,9 +3,8 @@ import { dark } from '@clerk/themes';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from "react-router";
-import CreateSong from './components/CreateSong';
 import MainLayout from './components/MainLayout';
-import ProtectedContent from './components/ProtectedContent';
+import ProtectedContent from './components/common/ProtectedContent';
 import { SongList } from './components/SongList';
 import ViewSong from './components/ViewSong';
 import DialogsProvider from './hooks/useDialogs/DialogsProvider';
@@ -14,6 +13,8 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import AppTheme from './theme/AppTheme';
 import Welcome from './Welcome';
+import ViewSongSheet from './components/ViewSongSheet';
+import EditSongMeasures from './components/timeddata/EditSongMeasures';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -34,8 +35,12 @@ root.render(
                 <Route index element={<SongList/>}/>
                 <Route path=":songId" element={<ViewSong/>}/>
                 <Route path=":songId/edit" element={<ViewSong/>}/>
-                <Route path=":songId/part/:part" element={<ViewSong/>}/>
-                <Route path=":songId/mix/:mixName" element={<ViewSong/>}/>
+                <Route path=":songId/data/notation" element={<ViewSongSheet/>}/>
+                <Route path=":songId/data/measures" element={<EditSongMeasures/>}/>
+                <Route path=":songId/data/bookmarks" element={<ViewSong/>}/>
+                <Route path=":songId/data/lyrics" element={<ViewSong/>}/>
+                <Route path=":songId/part/:part/play" element={<ViewSong/>}/>
+                <Route path=":songId/mix/:mixName/play" element={<ViewSong/>}/>
               </Route>
             </Route>
           </Routes>

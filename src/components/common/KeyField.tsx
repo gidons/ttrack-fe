@@ -1,10 +1,7 @@
+import { Checkbox, FormControlLabel, Grid, MenuItem, Select, Stack } from "@mui/material";
 import React from "react";
+import { displayKeyValue, FLAT_SYM, SHARP_SYM } from "../utils";
 import { FormFieldSpec, FormFieldState, TextDisplayField } from "./StandardForm";
-import { Box, Checkbox, FormControlLabel, Grid, MenuItem, Select, Stack, TextField } from "@mui/material";
-import { ValueSpinner } from "./ValueSpinner";
-import { M } from "@clerk/clerk-react/dist/useAuth-fq1pQd_y";
-import { CheckBox } from "@mui/icons-material";
-import { displayKeyValue, FLAT_SYM, SHARP_SYM } from "./utils";
 
 export type KeyFieldSpec = FormFieldSpec
 export type KeyFieldProps = KeyFieldSpec & FormFieldState
@@ -37,7 +34,7 @@ interface KeyEditorProps {
 function KeyEditor({value, name, displayName, onChange}: KeyEditorProps) {
     const pattern = /([A-G])([#b]?)(m?)/
     const [, letter, accidental, mode] = (value.match(pattern) || ['','','',''])
-    console.log(`KeyEditor: value=${value} letter=${letter}`)
+    // console.log(`KeyEditor: value=${value} letter=${letter}`)
 
     const handleLetterChange = React.useCallback((newLetter: string) => {
         if (letter != newLetter) {

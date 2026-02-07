@@ -6,7 +6,7 @@ import React from "react";
 export interface ValueSpinnerProps<T> {
     value: T,
     values: T[],
-    onChange: ((T) => void),
+    onChange: ((v: T) => void),
     sx?: SxProps
 }
 

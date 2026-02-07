@@ -5,7 +5,7 @@ import React from "react";
 import { useBackend } from "../backend/useBackend";
 import { MixTrack, STD_MIX_TYPES } from "../types";
 import { AddMixDialogProps } from "./MixDialog";
-import { PitchAndSpeedControl } from "./PitchAndSpeedControl";
+import { PitchAndSpeedControl } from "./common/PitchAndSpeedControl";
 import { toJson } from "./utils";
 
 export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProps) {

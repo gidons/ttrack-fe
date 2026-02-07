@@ -1,86 +1,91 @@
+import { pick } from "./components/utils";
+
 export interface Song {
-  id: string;
-  title: string;
-  shortTitle?: string;
-  arranger?: string;
-  key?: string;
-  voicing?: string;
-  durationSec?: number;
-  allPartsMediaUrl?: string;
-  eTag?: string;
+    id: string;
+    title: string;
+    shortTitle?: string;
+    arranger?: string;
+    key?: string;
+    voicing?: string;
+    durationSec?: number;
+    parts: string[],
+    /** The media URL for the all-channel mix */
+    mediaUrl?: string;
+    notationUrl?: string;
+    eTag?: string;
 }
 
 export function isCreatableSong(partialSong: Partial<Song>) {
-  return !!partialSong.title
+    return !!partialSong.title
 }
 
 export interface StereoMixSpec {
-  leftFactors: number[];
-  rightFactors: number[];
+    leftFactors: number[];
+    rightFactors: number[];
 }
 
 export interface StereoMix {
-  name: string;
-  parts: string[];
-  spec: StereoMixSpec;
-  pitchShift: number;
-  speedFactor: number;
+    name: string;
+    parts: string[];
+    spec: StereoMixSpec;
+    pitchShift: number;
+    speedFactor: number;
 }
 
 export const NULL_STEREO_MIX: StereoMix = {
-  name: "N/A",
-  parts: [],
-  spec: { leftFactors: [], rightFactors: [] },
-  pitchShift: 0,
-  speedFactor: 1
+    name: "N/A",
+    parts: [],
+    spec: { leftFactors: [], rightFactors: [] },
+    pitchShift: 0,
+    speedFactor: 1
 }
 
 export interface Voicing {
-  name: string;
-  displayName: string;
-  parts: string[];
+    name: string;
+    displayName: string;
+    parts: string[];
 }
 
 export const STD_VOICING_LIST: Array<Voicing> = [
-  { name: "BB", displayName: "TLBB", parts: ["Tenor", "Lead", "Bari", "Bass"] },
-  { name: "TTBB", displayName: "TTBB", parts: ["Tenor1", "Tenor2", "Bari", "Bass"] },
-  { name: "SATB", displayName: "SATB", parts: ["Soprano", "Alto", "Tenor", "Bass"] },
-  { name: "SSAA", displayName: "SSAA", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2"] },
-  { name: "SSAATTBB", displayName: "SSAATTBB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2", "Tenor1", "Tenor2", "Bari", "Bass"] },
-  { name: "CUSTOM", displayName: "Custom", parts: [] }
+    { name: "BB", displayName: "TLBB", parts: ["Tenor", "Lead", "Bari", "Bass"] },
+    { name: "TTBB", displayName: "TTBB", parts: ["Tenor1", "Tenor2", "Bari", "Bass"] },
+    { name: "SATB", displayName: "SATB", parts: ["Soprano", "Alto", "Tenor", "Bass"] },
+    { name: "SSAA", displayName: "SSAA", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2"] },
+    { name: "SSAATTBB", displayName: "SSAATTBB", parts: ["Soprano1", "Soprano2", "Alto1", "Alto2", "Tenor1", "Tenor2", "Bari", "Bass"] },
+    { name: "CUSTOM", displayName: "Custom", parts: [] }
 ]
 export const STD_VOICINGS = Object.fromEntries(STD_VOICING_LIST.map(v => [v.name, v]))
 
 export const STD_MIX_TYPES = ["Full Mix", "Solo", "Dominant", "Left", "Missing"]
 
 export function fullMixForParts(name: string, parts: Array<string>): StereoMix {
-  const n = parts.length
-  return {
-    name,
-    parts,
-    spec: { leftFactors: Array(n).fill(1/n), rightFactors: Array(n).fill(1/n) },
-    pitchShift: 0,
-    speedFactor: 1
-  }
+    const n = parts.length
+    return {
+        name,
+        parts,
+        spec: { leftFactors: Array(n).fill(1 / n), rightFactors: Array(n).fill(1 / n) },
+        pitchShift: 0,
+        speedFactor: 1
+    }
 }
 
 export interface TrackInfo {
-  readonly trackId: string;
-  readonly songId: string;
-  readonly durationSec: number;
-  readonly created: Date;
-  readonly updated: Date;
-  readonly currentTaskId: string;
-  readonly url: string;
-  readonly mediaUrl: string;
+    readonly trackId: string;
+    readonly songId: string;
+    readonly durationSec: number;
+    readonly created: Date;
+    readonly updated: Date;
+    readonly currentTaskId: string;
+    readonly url: string;
+    readonly mediaUrl: string;
 }
 
 export interface PartTrack extends TrackInfo {
-  readonly part: string;
+    readonly part: string;
 }
 
 export interface MixTrack extends TrackInfo {
-  readonly mix: StereoMix;
+    readonly mix: StereoMix;
 }
 
 export type Track = PartTrack | MixTrack;
@@ -93,42 +98,96 @@ export function isValidMixTrack(t: Partial<MixTrack>): t is MixTrack { return is
 export function isValidPartTrack(t: Partial<PartTrack>): t is PartTrack { return isValidTrack(t) && isPartTrack(t) }
 
 export function isTrackUpdating(t: TrackInfo): boolean {
-  return !!t.currentTaskId
+    return !!t.currentTaskId
 }
 
 export function trackName(t: Track): string {
-  return isMixTrack(t) ? t.trackId : t.part;
+    return isMixTrack(t) ? t.trackId : t.part;
 }
 
 export function stereoMix(t: Track): StereoMix {
-  if (isMixTrack(t)) {
-    return t.mix;
-  }
-  if (isPartTrack(t)) {
-    return {
-      name: t.part,
-      parts: [t.part],
-      spec: {
-        leftFactors: [1.0],
-        rightFactors: [1.0]
-      },
-      pitchShift: 0,
-      speedFactor: 1
+    if (isMixTrack(t)) {
+        return t.mix;
     }
-  }
-  return NULL_STEREO_MIX
+    if (isPartTrack(t)) {
+        return {
+            name: t.part,
+            parts: [t.part],
+            spec: {
+                leftFactors: [1.0],
+                rightFactors: [1.0]
+            },
+            pitchShift: 0,
+            speedFactor: 1
+        }
+    }
+    return NULL_STEREO_MIX
+}
+
+export const TIMED_TEXT_DATA_TYPES = ['MEASURES', 'BOOKMARKS', 'LYRICS'] as const
+export type TimedTextDataType = typeof TIMED_TEXT_DATA_TYPES[number]
+const EMPTY_TIMED_TEXT_DATA_FOR_PART: Record<TimedTextDataType, TimedTextEntry[]> = {
+    'BOOKMARKS': [],
+    'LYRICS': [],
+    'MEASURES': []
+}
+
+export class TimedTextData {
+    entriesByPartAndType: Record<string, Record<TimedTextDataType, TimedTextEntry[]>>
+
+    constructor(rawByPartAndType: object) {
+        // Filter out data that doesn't match the expected type
+        this.entriesByPartAndType = Object.fromEntries(
+            Object.entries(rawByPartAndType)
+                .map(partData => {
+                    const filtered = pick(partData[1], TIMED_TEXT_DATA_TYPES)
+                    return [partData[0], {...EMPTY_TIMED_TEXT_DATA_FOR_PART, ...filtered}]
+                })
+        )
+    }
+
+    getType(type: TimedTextDataType): Record<string, TimedTextEntry[]> {
+        return Object.fromEntries(
+            Object.entries(this.entriesByPartAndType)
+                // convert to [part, entries-for-part-and-type]
+                .map(e => [e[0], e[1][type]]))
+    }
+
+    getPart(part: string): Record<TimedTextDataType, TimedTextEntry[]> {
+        return this.entriesByPartAndType[part]
+    }
+}
+
+export interface TimedTextEntry {
+    t: number,
+    v: string
 }
 
 export function secondsToHMS(seconds: number): string {
-  if (seconds <= 0) { return '--'; }
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const hDisplay = h > 0 ? h + ":" : "";
-  const mDisplay = h > 0 ? 
-    m.toString().padStart(2, '0') + ":" : 
-    (m > 0 ? m + ":" : "");
-  const sDisplay = s.toString().padStart(2, '0');
-  return (hDisplay + mDisplay + sDisplay).trim();
+    if (seconds <= 0) { return '--'; }
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const hDisplay = h > 0 ? h + ":" : "";
+    const mDisplay = h > 0 ?
+        m.toString().padStart(2, '0') + ":" :
+        (m > 0 ? m + ":" : "");
+    const sDisplay = s.toString().padStart(2, '0');
+    return (hDisplay + mDisplay + sDisplay).trim();
 }
 
+/**
+ * Convert an integer number of milliseconds to 'mm:ss.t',
+ * where 'mm' is minutes, 'ss' is seconds, and 't' is tenths of a second.
+ * E.g.: 76543 -> '1:16.5'
+ */
+export function millisToMST(millis: number): string {
+    if (millis < 0) { return '--'; }
+    const ms = Math.floor(millis)
+    const tenths = Math.floor((ms % 1000) / 100)
+    const sec = Math.floor(ms / 1000)
+    const m = Math.floor(sec / 60);
+    const s = sec % 60
+    const sDisplay = s.toString().padStart(2, '0');
+    return `${m}:${sDisplay}.${tenths}`
+}
