@@ -12,7 +12,7 @@ import PageContainer from "../common/PageContainer";
 import SheetMusicViewer from "../sheet/SheetMusicViewer";
 import { SheetMusicViewerContext } from "../sheet/SheetMusicViewerContext";
 
-export default function EditSongMeasures() {
+export default function EditMeasures() {
     const { songId } = useParams()
 
     const backend = useBackend()

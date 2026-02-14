@@ -10,7 +10,7 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
-import { useNavigate, useParams, useResolvedPath } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useBackend } from '../backend/useBackend';
 import { useDialogs } from '../hooks/useDialogs/useDialogs';
 import useNotifications from '../hooks/useNotifications/useNotifications';

@@ -1,3 +1,4 @@
+import { To } from "react-router";
 import { pick } from "./components/utils";
 
 export interface Song {
@@ -126,14 +127,12 @@ export function stereoMix(t: Track): StereoMix {
 
 export const TIMED_TEXT_DATA_TYPES = ['MEASURES', 'BOOKMARKS', 'LYRICS'] as const
 export type TimedTextDataType = typeof TIMED_TEXT_DATA_TYPES[number]
-const EMPTY_TIMED_TEXT_DATA_FOR_PART: Record<TimedTextDataType, TimedTextEntry[]> = {
-    'BOOKMARKS': [],
-    'LYRICS': [],
-    'MEASURES': []
-}
+export type TimedTextByType = Partial<Record<TimedTextDataType, TimedTextEntry[]>>
+export type TimedTextByPart = Record<string, TimedTextEntry[]>
+export const TIMED_TEXT_SHARED_PART = 'ALL'
 
 export class TimedTextData {
-    entriesByPartAndType: Record<string, Record<TimedTextDataType, TimedTextEntry[]>>
+    entriesByPartAndType: Record<string, TimedTextByType>
 
     constructor(rawByPartAndType: object) {
         // Filter out data that doesn't match the expected type
@@ -141,19 +140,26 @@ export class TimedTextData {
             Object.entries(rawByPartAndType)
                 .map(partData => {
                     const filtered = pick(partData[1], TIMED_TEXT_DATA_TYPES)
-                    return [partData[0], {...EMPTY_TIMED_TEXT_DATA_FOR_PART, ...filtered}]
+                    return [partData[0], filtered]
                 })
         )
     }
 
-    getType(type: TimedTextDataType): Record<string, TimedTextEntry[]> {
+    static forType(type: TimedTextDataType, entriesByPart: TimedTextByPart) {
+        const byPartAndType = Object.fromEntries(
+            Object.entries(entriesByPart).map(e => [e[0], {[type] : e[1]}])
+        )
+        return new TimedTextData(byPartAndType)
+    }
+
+    getType(type: TimedTextDataType): TimedTextByPart {
         return Object.fromEntries(
             Object.entries(this.entriesByPartAndType)
                 // convert to [part, entries-for-part-and-type]
                 .map(e => [e[0], e[1][type]]))
     }
 
-    getPart(part: string): Record<TimedTextDataType, TimedTextEntry[]> {
+    getPart(part: string): TimedTextByType {
         return this.entriesByPartAndType[part]
     }
 }

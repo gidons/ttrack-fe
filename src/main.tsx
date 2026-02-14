@@ -14,7 +14,8 @@ import reportWebVitals from './reportWebVitals';
 import AppTheme from './theme/AppTheme';
 import Welcome from './Welcome';
 import ViewSongSheet from './components/ViewSongSheet';
-import EditSongMeasures from './components/timeddata/EditSongMeasures';
+import EditBookmarks from './components/timeddata/EditBookmarks';
+import EditMeasures from './components/timeddata/EditMeasures';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -36,8 +37,8 @@ root.render(
                 <Route path=":songId" element={<ViewSong/>}/>
                 <Route path=":songId/edit" element={<ViewSong/>}/>
                 <Route path=":songId/data/notation" element={<ViewSongSheet/>}/>
-                <Route path=":songId/data/measures" element={<EditSongMeasures/>}/>
-                <Route path=":songId/data/bookmarks" element={<ViewSong/>}/>
+                <Route path=":songId/data/measures" element={<EditMeasures/>}/>
+                <Route path=":songId/data/bookmarks" element={<EditBookmarks/>}/>
                 <Route path=":songId/data/lyrics" element={<ViewSong/>}/>
                 <Route path=":songId/part/:part/play" element={<ViewSong/>}/>
                 <Route path=":songId/mix/:mixName/play" element={<ViewSong/>}/>

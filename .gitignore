@@ -11,6 +11,9 @@
 # production
 /build
 
+# WIP and other useful stuff
+/holding
+
 # misc
 .DS_Store
 .env.local

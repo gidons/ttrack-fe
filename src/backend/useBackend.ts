@@ -29,6 +29,7 @@ export interface SongClient {
     listMixes: () => Promise<MixTrack[]>
     listDefaultMixes: () => Promise<StereoMix[]>
     getText: () => Promise<TimedTextData>
+    putText: (data: TimedTextData) => Promise<void>
     uploadPart: (name: string, audioFile: File) => Promise<PartTrack>
     uploadParts: (parts: string[], files: File[]) => Promise<PartTrack[]>
     createMix: (mix: StereoMix, isCustom: boolean, overwrite: boolean) => Promise<MixTrack>
@@ -164,6 +165,9 @@ export function useBackend() : Backend {
         async getText() {
             const response = await client.get(`${this.basePath}/text`);
             return new TimedTextData(response.data)
+        }
+        async putText(data: TimedTextData) {
+            await client.put(`${this.basePath}/text`, data.entriesByPartAndType);
         }
         part(part: string) {
             return new PartClientImpl(this.songId, part)

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, IconButton, Stack, Typography, Tooltip } from '@mui/material'
-import { FastForward, FastRewind, PlayArrow, Pause, Bookmark, ChevronLeft, ChevronRight } from '@mui/icons-material'
+import { FastForward, FastRewind, PlayArrow, Pause, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import { ValueSpinner } from './ValueSpinner'
 import { TimedTextEntry, millisToMST } from '../../types'
 
