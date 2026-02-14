@@ -258,7 +258,7 @@ export default function ViewSong() {
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
                         canDelete={() => false}
                         onFoundSelected={handleFoundSelected}
-                        playButtonPath={`/songs/${songId}/part/{id}`}
+                        playButtonPath={`/songs/${songId}/part/{id}/play`}
                         addDialog={UploadPartDialog}
                     />
                     <SongDataList song={song as Song}/>
@@ -276,7 +276,7 @@ export default function ViewSong() {
                         selected={selectedMixName}
                         onFoundSelected={handleFoundSelected}
                         canDelete={(track: Track) => track.trackId != 'All'}
-                        playButtonPath={`/songs/${songId}/mix/{id}`}
+                        playButtonPath={`/songs/${songId}/mix/{id}/play`}
                         addDialog={MixDialog}
                     />
                 </Box>}

@@ -150,9 +150,12 @@ export default function EditSongMeasures() {
                                 <Bookmark/>
                             </IconButton>
                             <TextField
-                                sx={{ width: '40px' }}
-                                value={nextMeasureNum} 
+                                sx={{ width: '60px' }}
+                                value={nextMeasureNum}
                                 contentEditable={false}
+                                slotProps={{
+                                    htmlInput: { style: { textAlign: 'center' } } 
+                                }}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) => setNextMeasureNum(parseInt(e.target.value))}
                                 />
                             </>
