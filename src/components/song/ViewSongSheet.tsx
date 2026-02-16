@@ -1,42 +1,38 @@
 import { ArrowBack, Delete, Upload } from "@mui/icons-material";
 import { Box, Button, FormControl, Grid, Input, Stack } from "@mui/material";
 import React, { ChangeEvent } from "react";
-import { useNavigate, useParams } from "react-router";
-import { useBackend } from "../backend/useBackend";
-import { useDialogs } from "../hooks/useDialogs/useDialogs";
-import useNotifications from "../hooks/useNotifications/useNotifications";
-import { Song } from "../types";
-import LoadingComponent from "./common/LoadingComponent";
-import PageContainer from "./common/PageContainer";
-import SheetMusicViewer from "./sheet/SheetMusicViewer";
-import { SheetMusicViewerContext } from "./sheet/SheetMusicViewerContext";
+import { useNavigate, useOutletContext, useParams } from "react-router";
+import { useBackend } from "../../backend/useBackend";
+import { useDialogs } from "../../hooks/useDialogs/useDialogs";
+import useNotifications from "../../hooks/useNotifications/useNotifications";
+import SheetMusicViewer from "../sheet/SheetMusicViewer";
+import { SheetMusicViewerContext } from "../sheet/SheetMusicViewerContext";
+import { SongPageContext } from "./SongPage";
 
 export default function ViewSongSheet() {
-    const { songId } = useParams()
+    const { songState: [song, setSong], reload, setChildProps } = useOutletContext<SongPageContext>()
 
     const backend = useBackend()
     const notifications = useNotifications()
     const dialogs = useDialogs()
     const navigate = useNavigate()
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [song, setSong] = React.useState<Song>(null)
     const [isUploading, setIsUploading] = React.useState(false)
     const [uploadFile, setUploadFile] = React.useState<File>(null)
     const [showUpload, setShowUpload] = React.useState(false)
 
     const sheetZoom = 0.7
-    const songClient = backend.song(songId)
+    const songClient = backend.song(song.id)
     const hasFile = !!song?.notationUrl
 
-    const loadData = React.useCallback(async () => {
+    React.useEffect(() => {
         setUploadFile(null)
         setIsUploading(false)
-        const fetchedSong = await songClient.get();
-        setSong(fetchedSong)
-        setShowUpload((!(fetchedSong?.notationUrl)))
-    }, [setUploadFile, setIsUploading, setSong, setShowUpload])
-
-    const reload = React.useCallback(() => { setIsLoading(true) }, [setIsLoading])
+        setShowUpload((!(song.notationUrl)))
+        setChildProps({
+            subTitle: ": MusicXML File",
+            breadcrumbs: [{ title: "MusicXML", path: null }]
+        })
+    }, [song, setUploadFile, setIsUploading, setShowUpload])
 
     function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
         setUploadFile(event.target.files.item(0))
@@ -123,46 +119,35 @@ export default function ViewSongSheet() {
     }
 
     return (
-        <PageContainer
-            title={song ? `${song.title} Notation File (MusicXML)` : "Loading..."}
-            breadcrumbs={[
-                { title: 'Songs', path: '/songs' },
-                { title: song ? `${song.title}` : "...", path: `/songs/${songId}` },
-                { title: 'Notation' }
-            ]}
-        >
-            <LoadingComponent isLoading={isLoading} setIsLoading={setIsLoading} loadData={loadData}>
-                <Stack spacing={2}>
-                    <Stack direction='row' justifyContent={'space-between'}>
-                        <Button
-                          variant="contained"
-                          startIcon={<ArrowBack/>}
-                          onClick={() => navigate(`/songs/${songId}`)}
-                        >
-                            Back
-                        </Button>
-                        <Stack direction='row' spacing={2}>
-                            <UploadComponent isOpen={showUpload}/>
-                            <Button
-                                color="primary"
-                                disabled={!hasFile}
-                                startIcon={<Delete/>}
-                                onClick={handleDelete}
-                            >
-                                Delete
-                            </Button> 
-                        </Stack>
-                    </Stack>
-                    
-                    {hasFile &&
-                        <Box alignSelf={"center"} width='100%'>
-                            <SheetMusicViewerContext.Provider value={{zoom: sheetZoom, background: '#cccccc'}}>
-                                <SheetMusicViewer sheetUrl={song.notationUrl}/>
-                            </SheetMusicViewerContext.Provider>
-                        </Box>
-                    }
+        <Stack spacing={2}>
+            <Stack direction='row' justifyContent={'space-between'}>
+                <Button
+                    variant="contained"
+                    startIcon={<ArrowBack/>}
+                    onClick={() => navigate(`/songs/${song.id}`)}
+                >
+                    Back
+                </Button>
+                <Stack direction='row' spacing={2}>
+                    <UploadComponent isOpen={showUpload}/>
+                    <Button
+                        color="primary"
+                        disabled={!hasFile}
+                        startIcon={<Delete/>}
+                        onClick={handleDelete}
+                    >
+                        Delete
+                    </Button> 
                 </Stack>
-            </LoadingComponent>
-        </PageContainer>
+            </Stack>
+            
+            {hasFile &&
+                <Box alignSelf={"center"} width='100%'>
+                    <SheetMusicViewerContext.Provider value={{zoom: sheetZoom, background: '#cccccc'}}>
+                        <SheetMusicViewer sheetUrl={song.notationUrl}/>
+                    </SheetMusicViewerContext.Provider>
+                </Box>
+            }
+        </Stack>
     )
 }

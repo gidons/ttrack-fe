@@ -1,5 +1,5 @@
 import React from "react";
-import { Song, Track } from "../types";
+import { Song, Track } from "../../types";
 import { BulkMixDialog } from "./BulkMixDialog";
 import { SingleMixDialog } from "./SingleMixDialog";
 import { AddTrackDialogProps } from "./TrackList";

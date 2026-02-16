@@ -3,32 +3,27 @@ import { CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/m
 import { DataGrid, GridActionsCellItem, GridColDef, GridRowParams } from "@mui/x-data-grid";
 import React from "react";
 import { useNavigate } from "react-router";
-import { useBackend } from "../backend/useBackend";
-import { Song, TIMED_TEXT_DATA_TYPES, TimedTextData } from "../types";
-import LoadingComponent from "./common/LoadingComponent";
-import { TableHeader, TableToolbar } from "./common/TableHeader";
-import { isEmpty } from "./utils";
+import { useBackend } from "../../backend/useBackend";
+import { Song, TIMED_TEXT_DATA_TYPES, TimedTextData } from "../../types";
+import LoadingComponent from "../common/LoadingComponent";
+import { TableHeader, TableToolbar } from "../common/TableHeader";
+import { isEmpty } from "../utils";
 
 export interface SongDataListProps {
     song: Song
+    dataPromise: Promise<TimedTextData>
+    reloadData: () => void
 }
-export default function SongDataList({song}: SongDataListProps) {
+export default function SongDataList({song, dataPromise, reloadData}: SongDataListProps) {
     const [isLoading, setIsLoading] = React.useState(true);
     const [timedData, setTimedData] = React.useState<TimedTextData>(null)
 
-    const backend = useBackend();
-    const songClient = backend.song(song.id);
     const navigate = useNavigate();
 
     const loadData = React.useCallback(async () => {
-        const fetchedData = await songClient.getText()
-        setTimedData(fetchedData)
-        console.log(`Data: ${JSON.stringify(fetchedData)}`)
-    }, [setTimedData])
-
-    const handleRefresh = React.useCallback(() => {
-        setIsLoading(true)
-    }, [setIsLoading])
+        setTimedData((await dataPromise))
+        console.log(`Data: ${JSON.stringify((await dataPromise))}`)
+    }, [setTimedData, dataPromise])
 
     function editUrl(type: string) { return `/songs/${song.id}/data/${type.toLowerCase()}` }
 
@@ -92,7 +87,7 @@ export default function SongDataList({song}: SongDataListProps) {
                 <TableToolbar>
                     <Tooltip title="Reload data" placement="right" enterDelay={1000}>
                         {isLoading ? <CircularProgress size={20}/> :
-                        <IconButton size="small" aria-label="refresh" onClick={handleRefresh}>
+                        <IconButton size="small" aria-label="refresh" onClick={reloadData}>
                             <Refresh/>
                         </IconButton>}
                     </Tooltip>

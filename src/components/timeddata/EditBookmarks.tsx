@@ -1,35 +1,41 @@
 import { ArrowBack, Bookmark, Clear, Delete, Edit, Save } from "@mui/icons-material";
 import { Button, IconButton, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import React from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 import { useBackend } from "../../backend/useBackend";
 import { useDialogs } from "../../hooks/useDialogs/useDialogs";
 import useNotifications from "../../hooks/useNotifications/useNotifications";
-import { millisToMST, Song, TIMED_TEXT_SHARED_PART, TimedTextByPart, TimedTextData, TimedTextEntry } from "../../types";
+import { millisToMST, TIMED_TEXT_SHARED_PART, TimedTextByPart, TimedTextData, TimedTextEntry } from "../../types";
 import AudioPlayer from "../common/AudioPlayer";
 import LoadingComponent from "../common/LoadingComponent";
-import PageContainer from "../common/PageContainer";
+import { SongPageContext } from "../song/SongPage";
 
 export default function EditBookmarks() {
-    const { songId } = useParams()
+    const { songState: [song, setSong], reloadData, dataPromise, setChildProps } = useOutletContext<SongPageContext>()
 
     const backend = useBackend()
     const notifications = useNotifications()
     const dialogs = useDialogs()
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = React.useState(true);
-    const [song, setSong] = React.useState<Song>(null)
     const [isEditing, setIsEditing] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
     const [bookmarks, setBookmarks] = React.useState<TimedTextByPart>({})
     const [selectedPart, setSelectedPart] = React.useState(TIMED_TEXT_SHARED_PART)
     const [playPositionMs, setPlayPositionMs] = React.useState(0)
 
-    const songClient = backend.song(songId)
+    const songClient = backend.song(song.id)
     const isSharedSelected = (selectedPart == TIMED_TEXT_SHARED_PART)
     const selectedBookmarks = bookmarks[selectedPart] ?? []
     const sharedBookmarks = isSharedSelected ? [] : (bookmarks[TIMED_TEXT_SHARED_PART] ?? [])
     
+    React.useEffect(() => {
+        setChildProps({
+            subTitle: ": Bookmarks",
+            breadcrumbs: [{ title: "Bookmarks", path: null }]
+        })
+    }, [])
+
     /**
      * An entry in the combined list of bookmarks, consisting of the bookmark and
      * its index in selectedBookmarks, which is -1 if it's not there (i.e. it's shared).
@@ -42,16 +48,12 @@ export default function EditBookmarks() {
 
     const loadData = React.useCallback(async () => {
         setIsSaving(false)
-        const fetchedSong = await songClient.get();
-        if (!fetchedSong.mediaUrl) {
+        if (!song.mediaUrl) {
             throw new Error("This page requires that the song have media in order to set bookmarks, but this song doesn't.")
         }
-        const fetchedData = (await songClient.getText())?.getType('BOOKMARKS')
-        setSong(fetchedSong)
-        setBookmarks(fetchedData)
-    }, [setIsSaving, setSong, setBookmarks])
-
-    const reload = React.useCallback(() => { setIsLoading(true) }, [setIsLoading])
+        const fetchedBookmarks = (await dataPromise)?.getType('BOOKMARKS')
+        setBookmarks(fetchedBookmarks)
+    }, [setIsSaving, setBookmarks, dataPromise])
 
     const handleSave = React.useCallback(async () => {
         setIsSaving(true)
@@ -59,12 +61,13 @@ export default function EditBookmarks() {
             await songClient.putText(TimedTextData.forType('BOOKMARKS', bookmarks))
             notifications.show('Measure timing saved', { severity: 'success', autoHideDuration: 2000 })
             setIsEditing(false)
+            reloadData()
         } catch (saveError) {
             notifications.show(`Failed to save measure timing: ${(saveError as Error).message}`, { severity: 'error' })
         } finally {
             setIsSaving(false)
         }
-    }, [bookmarks, songClient, notifications, setIsSaving, setIsEditing, reload])
+    }, [bookmarks, songClient, notifications, setIsSaving, setIsEditing, reloadData])
 
     /**
      * Apply the given function to the list of bookmarks for the selected part
@@ -105,128 +108,119 @@ export default function EditBookmarks() {
     }
 
     return (
-        <PageContainer
-            title={song ? `${song.title} Bookmarks` : "Loading..."}
-            breadcrumbs={[
-                { title: 'Songs', path: '/songs' },
-                { title: song ? `${song.title}` : "...", path: `/songs/${songId}` },
-                { title: 'Bookmarks' }
-            ]}
-        >
-            <LoadingComponent isLoading={isLoading} setIsLoading={setIsLoading} loadData={loadData}>
-                <Stack spacing={2}>
-                    <Stack direction='row' justifyContent={'space-between'}>
+        <LoadingComponent isLoading={isLoading} setIsLoading={setIsLoading} loadData={loadData}>
+            <Stack spacing={2}>
+                <Stack direction='row' justifyContent={'space-between'}>
+                    <Button
+                        variant="contained"
+                        startIcon={<ArrowBack/>}
+                        onClick={() => isEditing ? setIsEditing(false) : navigate(`/songs/${song.id}`)}
+                    >
+                        {isEditing ? "Cancel" : "Back"}
+                    </Button>
+                    <Stack direction="row" spacing={2}>
+                        {isEditing ?
                         <Button
-                          variant="contained"
-                          startIcon={<ArrowBack/>}
-                          onClick={() => navigate(`/songs/${songId}`)}
+                            color="primary"
+                            variant="contained"
+                            loading={isSaving}
+                            startIcon={<Save/>}
+                            onClick={handleSave}
                         >
-                            Back
-                        </Button>
-                        <Stack direction="row" spacing={2}>
-                            {isEditing ?
-                            <Button
-                                color="primary"
-                                variant="contained"
-                                loading={isSaving}
-                                startIcon={<Save/>}
-                                onClick={handleSave}
-                            >
-                                Save
-                            </Button> 
-                            :
-                            <Button
-                                color="primary"
-                                variant="contained"
-                                startIcon={<Edit/>}
-                                onClick={() => setIsEditing(true)}
-                            >
-                                Edit
-                            </Button>} 
-                            <Button
-                                color="primary"
-                                disabled={isSaving}
-                                startIcon={<Clear/>}
-                                onClick={handleClear}
-                            >
-                                Clear All
-                            </Button> 
-                        </Stack>
+                            Save
+                        </Button> 
+                        :
+                        <Button
+                            color="primary"
+                            variant="contained"
+                            startIcon={<Edit/>}
+                            onClick={() => setIsEditing(true)}
+                        >
+                            Edit
+                        </Button>} 
+                        <Button
+                            color="primary"
+                            disabled={isSaving}
+                            startIcon={<Clear/>}
+                            onClick={handleClear}
+                        >
+                            Clear All
+                        </Button> 
                     </Stack>
-                    <AudioPlayer 
-                        marks={selectedBookmarks} 
-                        mediaUrl={song?.mediaUrl} 
-                        positionMs={playPositionMs} 
-                        onTime={setPlayPositionMs}
-                        onMark={handleMark}
-                        actions={
-                            <IconButton aria-label='set-mark' onClick={() => handleMark()} disabled={!isEditing}>
-                                <Bookmark/>
-                            </IconButton>
-                        }
-                        />
-                        <Paper sx={{ p: 2, flex: '0 0 auto', overflow: 'auto' }}>
-                            <Stack direction="row" spacing={2} alignItems={"center"}>
-                                <Typography variant="subtitle1" gutterBottom>Bookmarks for </Typography>
-                                <Select
-                                    value={selectedPart}
-                                    onChange={e => setSelectedPart(e.target.value)}
-                                >
-                                    <MenuItem value={TIMED_TEXT_SHARED_PART}>All Parts</MenuItem>
-                                    {song?.parts?.map((part) => 
-                                        <MenuItem key={part} value={part}>{part}</MenuItem>
-                                    )}
-                                </Select>
-                            </Stack>
-                            {combinedBookmarks.length === 0 ? (<Typography color="text.secondary">
-                                No bookmarks yet. {
-                                isEditing ? "Use the bookmark icon to insert one at the current play time."
-                                          : "Click Edit to start adding some."}
-                            </Typography>
-
-                            ) : (
-                            <Table size="small" sx={{overflowY: 'auto'}}>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell sx={{ width: 80 }}>Time</TableCell>
-                                        <TableCell sx={{ flex: 1 }}>Description</TableCell>
-                                        <TableCell sx={{ width: '80px' }} align="center">&nbsp;</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {combinedBookmarks.map((bmh, idx) => {
-                                        const [bm, selectedIndex] = bmh
-                                        const isShared = (selectedIndex < 0)
-                                        return <TableRow key={`bm-${idx}`}>
-                                            <TableCell sx={{ cursor: 'pointer' }}
-                                                onClick={() => { setPlayPositionMs(bm.t) }}>{millisToMST(bm.t)}
-                                            </TableCell>
-                                            <TableCell>
-                                                <TextField
-                                                    fullWidth
-                                                    variant="standard"
-                                                    value={bm.v}
-                                                    disabled={isShared}
-                                                    onChange={(e) => handleDescriptionChange(selectedIndex, e.target.value)}
-                                                    placeholder="Enter description"
-                                                />
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <IconButton 
-                                                    size="small" 
-                                                    onClick={() => handleDelete(selectedIndex)}
-                                                    disabled={isShared}
-                                                    aria-label="delete">
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    })}
-                                </TableBody>
-                            </Table>)}
-                        </Paper>
                 </Stack>
-            </LoadingComponent>
-        </PageContainer>
+                <AudioPlayer 
+                    marks={selectedBookmarks} 
+                    mediaUrl={song?.mediaUrl} 
+                    positionMs={playPositionMs} 
+                    onTime={setPlayPositionMs}
+                    onMark={handleMark}
+                    actions={
+                        <IconButton aria-label='set-mark' onClick={() => handleMark()} disabled={!isEditing}>
+                            <Bookmark/>
+                        </IconButton>
+                    }
+                    />
+                <Paper sx={{ p: 2, flex: '0 0 auto', overflow: 'auto' }}>
+                    <Stack direction="row" spacing={2} alignItems={"center"}>
+                        <Typography variant="subtitle1" gutterBottom>Bookmarks for </Typography>
+                        <Select
+                            value={selectedPart}
+                            onChange={e => setSelectedPart(e.target.value)}
+                        >
+                            <MenuItem value={TIMED_TEXT_SHARED_PART}>All Parts</MenuItem>
+                            {song?.parts?.map((part) => 
+                                <MenuItem key={part} value={part}>{part}</MenuItem>
+                            )}
+                        </Select>
+                    </Stack>
+                    {combinedBookmarks.length === 0 ? (<Typography color="text.secondary">
+                        No bookmarks yet. {
+                        isEditing ? "Use the bookmark icon to insert one at the current play time."
+                                    : "Click Edit to start adding some."}
+                    </Typography>
+
+                    ) : (
+                    <Table size="small" sx={{overflowY: 'auto'}}>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell sx={{ width: 80 }}>Time</TableCell>
+                                <TableCell sx={{ flex: 1 }}>Description</TableCell>
+                                <TableCell sx={{ width: '80px' }} align="center">&nbsp;</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {combinedBookmarks.map((bmh, idx) => {
+                                const [bm, selectedIndex] = bmh
+                                const isShared = (selectedIndex < 0)
+                                return <TableRow key={`bm-${idx}`}>
+                                    <TableCell sx={{ cursor: 'pointer' }}
+                                        onClick={() => { setPlayPositionMs(bm.t) }}>{millisToMST(bm.t)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            fullWidth
+                                            variant="standard"
+                                            value={bm.v}
+                                            disabled={isShared || !isEditing}
+                                            onChange={(e) => handleDescriptionChange(selectedIndex, e.target.value)}
+                                            placeholder="Enter description"
+                                        />
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <IconButton 
+                                            size="small" 
+                                            onClick={() => handleDelete(selectedIndex)}
+                                            disabled={isShared || !isEditing}
+                                            aria-label="delete">
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            })}
+                        </TableBody>
+                    </Table>)}
+                </Paper>
+            </Stack>
+        </LoadingComponent>
     )
 }

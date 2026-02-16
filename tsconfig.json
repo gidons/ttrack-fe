@@ -17,4 +17,6 @@
     "types": ["vite/client"]
   },
   "include": ["src"]
+  ,
+  "exclude": ["build", "holding", "node_modules"]
 }

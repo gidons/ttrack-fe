@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useContext } from 'react';
-import { sleep } from '../components/utils';
+import { omit, pick, sleep } from '../components/utils';
 import { MixTrack, PartTrack, Song, StereoMix, StereoMixSpec, TimedTextData, TimedTextEntry, TrackInfo } from '../types';
 import { AuthContext } from './AuthContext';
 
@@ -35,6 +35,7 @@ export interface SongClient {
     createMix: (mix: StereoMix, isCustom: boolean, overwrite: boolean) => Promise<MixTrack>
     createMixPackage: (props: MixPackageProps) => Promise<MixTrack[]>
     submitZipMixesRequest: (trackIds: string[]) => Promise<string>
+    // TODO have the service return a URL to the just-uploaded file; alternatively, can we show from local storage?
     uploadNotation: (file: File) => Promise<void>
     deleteNotation: () => Promise<void>
     part: (part: string) => PartClient
@@ -57,6 +58,9 @@ export interface Backend {
     download: (url: string) => Promise<string>
     waitForTask: (taskId: string) => Promise<Task>
 }
+
+/** The following fields of Song require more expensive queries, so we don't always have them. */
+const SONG_EXTENDED_FIELDS: (keyof Song)[] = ['parts', 'mediaUrl', 'notationUrl']
 
 type StereoMixDTO = Omit<StereoMix, 'spec'> & { mix: StereoMixSpec };
 type MixTrackDTO = Omit<TrackDTO, 'mix'> & { mixInfo: StereoMixDTO };
@@ -139,8 +143,10 @@ export function useBackend() : Backend {
         }
         async update(song: Song) { 
             console.log(`Updating song: ${JSON.stringify(song)}`)
-            const response = await client.put(this.basePath, song);
-            return response.data
+            const response = await client.put(this.basePath, song)
+            // Remove the extended fields, which might be there but null
+            const updatedInfo = omit(response.data, SONG_EXTENDED_FIELDS)
+            return { ...song, ...updatedInfo }
         }
         async delete() {
             console.log(`Deleting song: ${this.songId}`)

@@ -2,11 +2,11 @@ import { Alert, Box, Button, DialogActions, FormControl, Link, Stack, TextField,
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import type { TreeViewItemId } from '@mui/x-tree-view/models';
 import React from "react";
-import { useBackend } from "../backend/useBackend";
-import { MixTrack, STD_MIX_TYPES } from "../types";
+import { useBackend } from "../../backend/useBackend";
+import { MixTrack, STD_MIX_TYPES } from "../../types";
 import { AddMixDialogProps } from "./MixDialog";
-import { PitchAndSpeedControl } from "./common/PitchAndSpeedControl";
-import { toJson } from "./utils";
+import { PitchAndSpeedControl } from "../common/PitchAndSpeedControl";
+import { toJson } from "../utils";
 
 export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProps) {
     // console.log("BulkMixDialog: start render");

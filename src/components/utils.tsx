@@ -18,7 +18,7 @@ export async function sleep(ms: number) {
 }
 
 export function isEmpty(obj: object) {
-  return Object.keys(obj).length === 0
+  return Object.keys(obj ?? {}).length === 0
 }
 
 export const SHARP_SYM = '♯'
@@ -34,6 +34,13 @@ export function topLevelObj(o: object) {
 export function pick<V, T extends Record<string, V>, U extends keyof(T)>(obj: object, keys: readonly string[]): Record<U, V> {
   const objE = Object.entries(obj)
   const filtered = objE.filter(e => keys.includes(e[0]))
+  const rec = Object.fromEntries(filtered)
+  return rec as Record<U, V>
+}
+
+export function omit<V, T extends Record<string, V>, U extends keyof(T)>(obj: object, keys: readonly string[]): Record<U, V> {
+  const objE = Object.entries(obj)
+  const filtered = objE.filter(e => !keys.includes(e[0]))
   const rec = Object.fromEntries(filtered)
   return rec as Record<U, V>
 }

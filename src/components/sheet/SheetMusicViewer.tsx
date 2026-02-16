@@ -80,14 +80,14 @@ export default function SheetMusicViewer({
     const [measureBoxes, setMeasureBoxes] = React.useState<Array<MeasureBox>>([])
     const context = useContext(SheetMusicViewerContext)
     const { zoom } = context
-    const highlightedMeasure = measureBoxes?.at(highlightedMeasureNum - 1)
+    const highlightedMeasure = highlightedMeasureNum > 0 ? measureBoxes?.at(highlightedMeasureNum - 1) : null
     const containerRef = useRef<HTMLDivElement | null>(null)
     const highlightRef = useRef<HTMLDivElement | null>(null)
 
 
-    // When highlightedMeasureNum or measureBoxes change, scroll the highlighted element into view
+    // When highlightedMeasure or measureBoxes change, scroll the highlighted element into view
     useEffect(() => {
-        if (!highlightedMeasureNum) { return }
+        if (!highlightedMeasure) { return }
         const el = highlightRef.current
         if (el) {
             // scrollIntoView will scroll the nearest scrollable ancestor (the container)
@@ -104,7 +104,7 @@ export default function SheetMusicViewer({
                 }
             }
         }
-    }, [highlightedMeasureNum, measureBoxes])
+    }, [highlightedMeasure, measureBoxes])
 
     const updateMeasures = React.useCallback((osmd: OSMD) => {
         if (osmd == null) { return [] }

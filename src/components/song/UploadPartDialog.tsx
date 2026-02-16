@@ -1,9 +1,9 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { useBackend } from "../backend/useBackend";
-import { isPartTrack, STD_VOICING_LIST, Track } from "../types";
-import { AddTrackDialogProps } from "./TrackList";
 import { useNavigate } from "react-router";
+import { useBackend } from "../../backend/useBackend";
+import { isPartTrack, STD_VOICING_LIST, Track } from "../../types";
+import { AddTrackDialogProps } from "./TrackList";
 
 export function UploadPartDialog({ song, isOpen, existingTracks, targetTrackId, onClose } : AddTrackDialogProps) {
     interface UploadRow {

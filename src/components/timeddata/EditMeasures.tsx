@@ -1,26 +1,25 @@
 import { ArrowBack, Bookmark, Clear, Delete, Edit, Save } from "@mui/icons-material";
 import { Box, Button, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import React, { ChangeEvent } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 import { useBackend } from "../../backend/useBackend";
 import { useDialogs } from "../../hooks/useDialogs/useDialogs";
 import useNotifications from "../../hooks/useNotifications/useNotifications";
-import { millisToMST, Song, TimedTextEntry } from "../../types";
+import { millisToMST, TIMED_TEXT_SHARED_PART, TimedTextEntry } from "../../types";
 import AudioPlayer from "../common/AudioPlayer";
 import LoadingComponent from "../common/LoadingComponent";
-import PageContainer from "../common/PageContainer";
 import SheetMusicViewer from "../sheet/SheetMusicViewer";
 import { SheetMusicViewerContext } from "../sheet/SheetMusicViewerContext";
+import { SongPageContext } from "../song/SongPage";
 
 export default function EditMeasures() {
-    const { songId } = useParams()
+    const { songState: [song, setSong], dataPromise, reloadData, setChildProps } = useOutletContext<SongPageContext>()
 
     const backend = useBackend()
     const notifications = useNotifications()
     const dialogs = useDialogs()
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = React.useState(true);
-    const [song, setSong] = React.useState<Song>(null)
     const [isEditing, setIsEditing] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
     const [measureTimes, setMeasureTimes] = React.useState<TimedTextEntry[]>([])
@@ -29,34 +28,35 @@ export default function EditMeasures() {
     const [currEntryIndex, setCurrEntryIndex] = React.useState(0)
 
     const sheetZoom = 0.7
-    const songClient = backend.song(songId)
+    const songClient = backend.song(song.id)
     const hasNotation = !!song?.notationUrl
+
+    React.useEffect(() => {
+        setChildProps({
+            subTitle: ": Measure Timing",
+            breadcrumbs: [{ title: "Measures" }]
+        })
+    }, [])
 
     const loadData = React.useCallback(async () => {
         setIsSaving(false)
-        const fetchedSong = await songClient.get();
-        if (!fetchedSong.mediaUrl) {
-            throw new Error("This page requires that the song have media in order to set measure times, but this song doesn't.")
-        }
-        const fetchedData = (await songClient.getText())?.getPart('ALL')['MEASURES'] ?? []
-        setSong(fetchedSong)
+        const fetchedData = (await dataPromise)?.getPart(TIMED_TEXT_SHARED_PART)['MEASURES'] ?? []
         setMeasureTimes(fetchedData)
-    }, [setIsSaving, setSong])
-
-    const reload = React.useCallback(() => { setIsLoading(true) }, [setIsLoading])
+    }, [setIsSaving, setSong, dataPromise])
 
     const handleSave = React.useCallback(async () => {
         setIsSaving(true)
         try {
-            await songClient.part("ALL").putText("MEASURES", measureTimes)
+            await songClient.part(TIMED_TEXT_SHARED_PART).putText("MEASURES", measureTimes)
             notifications.show('Measure timing saved', { severity: 'success', autoHideDuration: 2000 })
             setIsEditing(false)
+            reloadData()
         } catch (saveError) {
             notifications.show(`Failed to save measure timing: ${(saveError as Error).message}`, { severity: 'error' })
         } finally {
             setIsSaving(false)
         }
-    }, [measureTimes, songClient, notifications, setIsSaving, setIsEditing, reload])
+    }, [measureTimes, songClient, notifications, setIsSaving, setIsEditing, reloadData])
 
     const handleClear = React.useCallback(async() => {
         const confirmed = await dialogs.confirm(
@@ -88,21 +88,13 @@ export default function EditMeasures() {
     }
 
     return (
-        <PageContainer
-            title={song ? `${song.title} Notation File (MusicXML)` : "Loading..."}
-            breadcrumbs={[
-                { title: 'Songs', path: '/songs' },
-                { title: song ? `${song.title}` : "...", path: `/songs/${songId}` },
-                { title: 'Notation' }
-            ]}
-        >
             <LoadingComponent isLoading={isLoading} setIsLoading={setIsLoading} loadData={loadData}>
                 <Stack spacing={2}>
                     <Stack direction='row' justifyContent={'space-between'}>
                         <Button
                           variant="contained"
                           startIcon={<ArrowBack/>}
-                          onClick={() => navigate(`/songs/${songId}`)}
+                          onClick={() => navigate(`/songs/${song.id}`)}
                         >
                             Back
                         </Button>
@@ -211,6 +203,5 @@ export default function EditMeasures() {
                     </Stack>
                 </Stack>
             </LoadingComponent>
-        </PageContainer>
     )
 }

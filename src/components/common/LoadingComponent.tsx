@@ -13,6 +13,7 @@ export default function LoadingComponent({loadData, children, isLoading, setIsLo
 
     React.useEffect(() => {
         if (isLoading) {
+            console.log(`LoadingComponent.loading`)
             // TODO: sus
             setError(null)
             loadData()

@@ -2,9 +2,9 @@ import React from 'react'
 import { IconButton, Tooltip } from '@mui/material'
 import { FileDownload, FileDownloadOff, FolderZip } from '@mui/icons-material';
 import CircularProgress from '@mui/material/CircularProgress';
-import { download } from './utils';
-import { useBackend } from '../backend/useBackend';
-import useNotifications from '../hooks/useNotifications/useNotifications';
+import { download } from '../utils';
+import { useBackend } from '../../backend/useBackend';
+import useNotifications from '../../hooks/useNotifications/useNotifications';
 
 export type ZipButtonState = "DISABLED" | "READY" | "INPROGRESS" | "SUCCEEDED" | "FAILED"
 

@@ -5,13 +5,13 @@ import Box from '@mui/material/Box';
 import { DataGrid, GridActionsCellItem, GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { useBackend } from '../backend/useBackend';
-import { useDialogs } from '../hooks/useDialogs/useDialogs';
-import { isTrackUpdating, secondsToHMS, Song, Track } from '../types';
+import { useBackend } from '../../backend/useBackend';
+import { useDialogs } from '../../hooks/useDialogs/useDialogs';
+import { isTrackUpdating, secondsToHMS, Song, Track } from '../../types';
 import DownloadZipButton from './DownloadZipButton';
-import LoadingComponent from './common/LoadingComponent';
-import { TableHeader, TableToolbar } from './common/TableHeader';
-import { download } from './utils';
+import LoadingComponent from '../common/LoadingComponent';
+import { TableHeader, TableToolbar } from '../common/TableHeader';
+import { download } from '../utils';
 
 /**
  * This component is intended to be included in the song page, not to be an independent page.
