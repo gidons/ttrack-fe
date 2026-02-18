@@ -1,104 +1,74 @@
 import { Alert, Box, Button, DialogActions, FormControl, Grid, InputLabel, Link, MenuItem, Select, SelectChangeEvent, SelectProps, Stack, TextField, Typography } from "@mui/material";
 import React from "react";
-import { fullMixForParts, MixTrack, NULL_STEREO_MIX, StereoMix } from "../../types";
+import { fullMixForParts, isMixTrack, MixTrack, NULL_STEREO_MIX, standardMixes, StereoMix } from "../../types";
 import StereoMixView from "../common/StereoMixView";
 import { useBackend } from "../../backend/useBackend";
 import { AddMixDialogProps } from "./MixDialog";
 
 export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMode, onClose} : AddMixDialogProps) {
-    console.log(`SingleMixDialog: start render; song=${song?.id}`);
-
-    const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: "custom"};
+    const CUSTOM_NAME = 'custom' as const
+    const CUSTOM_DISPLAY_NAME = 'Custom' as const
+    const INITIAL_CUSTOM_MIX: StereoMix = {...NULL_STEREO_MIX, name: CUSTOM_NAME};
 
     // Is this an edit of an existing track or creation of a new track?
     const isEdit = !!targetTrackId
-    const targetTrack = existingTracks.find(t => t.trackId == targetTrackId) as (MixTrack | null)
+    const existingMixes = existingTracks.filter(isMixTrack)
+    const existingMixNames = new Set(existingMixes.map(m => m.mix.name))
+    const targetTrack = existingMixes.find(t => t.trackId == targetTrackId)
     const editError = (isEdit && !targetTrack) ? new Error(`Track ${targetTrackId} not found. Please refresh the page.`) : null
 
-    const [isLoading, setIsLoading] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [error, setError] = React.useState<Error>(editError);
-    const [defaultMixes, setDefaultMixes] = React.useState<StereoMix[]>([]);
-    const [existingMixNames, setExistingMixNames] = React.useState(new Set<string>())
-    const [currentMix, setCurrentMix] = React.useState<StereoMix | null>(
-        targetTrack?.mix
-    );
-    const [customTrackName, setCustomTrackName] = React.useState(
-        targetTrack?.mix.name ?? 'Custom'
-    );
+    const defaultMixesByType: Record<string, StereoMix[]> = React.useMemo(() => standardMixes(song.parts), [song.parts]);
+    const defaultMixes: StereoMix[] = Object.entries(defaultMixesByType).flatMap(e => e[1])
+    const customFullMix = React.useMemo(() => { return {...fullMixForParts(song.parts), name: CUSTOM_NAME} }, [song.parts])
+    const [currentMix, setCurrentMix] = React.useState<StereoMix>(targetTrack?.mix ?? customFullMix);
+    const [customTrackName, setCustomTrackName] = React.useState(targetTrack?.mix.name ?? CUSTOM_DISPLAY_NAME);
     const [isCustomMix, setIsCustomMix] = React.useState(true);
 
     const backend = useBackend()
     const songClient = backend.song(song.id)
 
     const reset = React.useCallback(() => {
-        console.log("Resetting.")
-        setDefaultMixes([])
-        setExistingMixNames(new Set())
+        // console.log("Resetting.")
         setCurrentMix(INITIAL_CUSTOM_MIX)
-        setCustomTrackName('Custom')
+        setCustomTrackName(CUSTOM_DISPLAY_NAME)
         setIsCustomMix(true)
     }, 
-    [setDefaultMixes, setExistingMixNames, setCurrentMix, setCustomTrackName, setIsCustomMix])
-
-    const loadData = React.useCallback(async () => {
-        if (!song || isEdit) { return }
-        setIsLoading(true)
-        try {
-            const parts = await songClient.listParts();
-            if ((currentMix?.parts?.length ?? 0) != parts.length) {
-                setCurrentMix(fullMixForParts("custom", parts.map(pt => pt.part)))
-            }
-            const fetchedMixes = await songClient.listMixes();
-            console.log(`Existing mix names: ${[...existingMixNames].join()}`);
-            setExistingMixNames(new Set(fetchedMixes.map(m => m.mix.name)))
-            const fetchedDflMixes = await songClient.listDefaultMixes();
-            setDefaultMixes(fetchedDflMixes);
-        } catch (fetchError) {
-            console.error(`fetchError: ${fetchError}`)
-            setError(fetchError as Error);
-        } finally {
-            setIsLoading(false)
-        }
-    }, [song, isEdit, setDefaultMixes, setError]);
+    [setCurrentMix, setCustomTrackName, setIsCustomMix])
 
     React.useEffect(() => { 
-        loadData() 
-    }, [loadData, song])
+        setCurrentMix(customFullMix)
+    }, [customFullMix, setCurrentMix])
 
     const trackName = React.useMemo(() => isCustomMix ? customTrackName : currentMix.name, [isCustomMix, currentMix])
 
     const handleCancel = React.useCallback(async () => {
         reset()
         onClose(false)
-    }, [onClose]);
+    }, [onClose, reset]);
 
     const handleSelectedMixChange = React.useCallback(
         (e: SelectChangeEvent<HTMLSelectElement>) => {
             const selectedMixName = e.target.value.toString();
             // console.log(`Mix name changed to '${selectedMixName}'`)
-            if (selectedMixName == 'custom') {
-                // TODO generate full mix locally
-                const fullMix = defaultMixes.find((m) => m.name == 'Full Mix');
-                const customMix: StereoMix = { ...fullMix, name: "custom" };
-                console.log(`Setting mix to custom full: ${JSON.stringify(customMix)}`);
-                setCurrentMix(customMix);
+            if (selectedMixName == CUSTOM_NAME) {
+                setCurrentMix(customFullMix);
                 setIsCustomMix(true);
             } else {
                 const selectedMix = defaultMixes.find((m) => m.name == selectedMixName);
                 if (selectedMix && (selectedMix != currentMix)) {
-                    console.log(`Setting mix to ${JSON.stringify(selectedMix)}`)
+                    // console.log(`Setting mix to ${JSON.stringify(selectedMix)}`)
                     setCurrentMix(selectedMix);
                     setIsCustomMix(false);
                 } else {
-                    console.log("Mix not found.");
+                    console.log(`Mix {selectedMixName} not found.`);
                 }
             }
         }, [setCurrentMix, setIsCustomMix, defaultMixes]
     )
 
     const handleTrackNameChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        console.log(`handleTrackNameChange: '${e.target.value}'`)
         setCustomTrackName(e.target.value);
     }, [setCustomTrackName]);
 
@@ -113,11 +83,10 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
             reset()
         } catch(e) {
             setError(e as Error);
-            throw e;
         } finally {
             setIsSubmitting(false)
         }
-    }, [song, trackName, currentMix, setIsSubmitting]);
+    }, [songClient, trackName, currentMix, setIsSubmitting, onClose, reset]);
 
     const handleMixChange = React.useCallback((newMix) => {
         console.log(`handleMixChange: mix=${JSON.stringify(newMix)}`)
@@ -139,7 +108,7 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
                 <FormControl fullWidth>
                     <InputLabel id="mix-name-label">Mix</InputLabel>
                     <Select
-                        value={currentMix?.name ?? 'custom'}
+                        value={currentMix?.name ?? CUSTOM_DISPLAY_NAME}
                         onChange={handleSelectedMixChange as SelectProps['onChange']}
                         labelId="mix-name-label"
                         name="mix"
@@ -152,7 +121,7 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
                             .map(m => 
                             <MenuItem key={`mix-${m.name}`} value={m.name}>{m.name}</MenuItem>
                         )}
-                        <MenuItem value="custom">Custom</MenuItem>
+                        <MenuItem value={CUSTOM_NAME}>Custom</MenuItem>
                     </Select>
                 </FormControl>}
                 <FormControl fullWidth>
@@ -174,7 +143,7 @@ export function SingleMixDialog({song, targetTrackId, existingTracks, onSwitchMo
                     variant="contained"
                     color="primary"
                     loading={isSubmitting}
-                    disabled={isLoading /* || !isValid()*/} 
+                    disabled={false /* !isValid()*/} 
                     onClick={handleSubmit}
                     type="submit">
                     {isEdit ? "Save" : "Create"}

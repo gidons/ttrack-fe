@@ -3,19 +3,17 @@ import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import type { TreeViewItemId } from '@mui/x-tree-view/models';
 import React from "react";
 import { useBackend } from "../../backend/useBackend";
-import { MixTrack, STD_MIX_TYPES } from "../../types";
+import { isMixTrack, MixTrack, standardMixes, STD_MIX_TYPES } from "../../types";
 import { AddMixDialogProps } from "./MixDialog";
 import { PitchAndSpeedControl } from "../common/PitchAndSpeedControl";
 import { toJson } from "../utils";
 
-export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProps) {
+export function BulkMixDialog({ song, existingTracks, onSwitchMode, onClose } : AddMixDialogProps) {
     // console.log("BulkMixDialog: start render");
 
     const [isLoading, setIsLoading] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [error, setError] = React.useState<Error>(null);
-    const [parts, setParts] = React.useState(new Array<string>())
-    const [existingMixes, setExistingMixes] = React.useState(new Array<MixTrack>());
     const [userAddedMixLabels, setUserAddedMixLabels] = React.useState<TreeViewItemId[]>([]);
     const [packageDesc, setPackageDesc] = React.useState('');
     const [pitchShift, setPitchShift] = React.useState(0)
@@ -24,45 +22,27 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
     const parentNodeNames = STD_MIX_TYPES.filter(t => t != 'Full Mix');
     const songClient = useBackend().song(song.id)
 
-    const loadData = React.useCallback(async () => {
-        setIsLoading(true)
-        try {
-            // console.log(`Loading dialog data for song ${song.id}`);
-            const partNames = (await songClient.listParts()).map(pt => pt.part);
-            setParts(partNames)
-            const fetchedMixes = await songClient.listMixes();
-            setExistingMixes(fetchedMixes);
-        } catch (fetchError) {
-            setError(fetchError as Error);
-        } finally {
-            setIsLoading(false)
-            setIsSubmitting(false)
-        }
-    }, [song, setIsLoading, setParts, setError, setExistingMixes]);
-
     const mixLabelToName = React.useCallback((name: string) => `${name}${packageDesc ? " " + packageDesc : ""}`, [packageDesc])
     const mixNameToLabel = React.useCallback((name: string) => packageDesc ? name.replace(" " + packageDesc, "") : name, [packageDesc])
 
-    const existingMixNames = React.useMemo(() => existingMixes.map(t => t.mix.name), [existingMixes])
+    const existingMixNames = React.useMemo(() => existingTracks.filter(isMixTrack).map(t => t.mix.name), [existingTracks])
     const userAddedMixNames = userAddedMixLabels.map(mixLabelToName)
     const selectedMixNames = [...(new Set<string>([...userAddedMixNames, ...existingMixNames]))]
     // console.log(`userAddedMixNames: ${toJson(userAddedMixNames)}`)
 
-    React.useEffect(() => { loadData() }, [loadData])
-
-    const mixTree = React.useMemo(() => STD_MIX_TYPES.flatMap(type => {
-        return [{
-            id: mixLabelToName(type),
-            label: type,
-            children: (type != 'Full Mix') ? parts.map(part => {
-                const label = `${part} ${type}`
-                return { 
-                    id: mixLabelToName(label), 
-                    label: label, 
-                }
-            }) : []
-        }]
-    }), [mixLabelToName, parts])
+    const mixTree = React.useMemo(() => {
+        const mixesByType = standardMixes(song.parts)
+        return Object.entries(mixesByType).map(e => {
+            const [type, mixes] = e
+            return {
+                id: mixLabelToName(type),
+                label: type,
+                children: (mixes.length <= 1) ? [] : mixes.map(m => {
+                    return { id: mixLabelToName(m.name), label: m.name }
+                })
+            }
+        })
+    }, [song.parts])
 
     const handleCancel = React.useCallback(() => {
         onClose(false)
@@ -95,7 +75,7 @@ export function BulkMixDialog({ song, onSwitchMode, onClose } : AddMixDialogProp
         setIsSubmitting(true)
         try {
             await songClient.createMixPackage({ 
-                parts, 
+                parts: song.parts, 
                 mixDescriptions, 
                 packageDescription: packageDesc.trim() || null, 
                 speedFactor: speedFactor, 

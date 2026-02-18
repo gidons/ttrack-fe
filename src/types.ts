@@ -25,6 +25,7 @@ export interface StereoMixSpec {
     rightFactors: number[];
 }
 
+// TODO add maxGain/maxLevel, to support totals above 1.0?
 export interface StereoMix {
     name: string;
     parts: string[];
@@ -57,14 +58,46 @@ export const STD_VOICING_LIST: Array<Voicing> = [
 ]
 export const STD_VOICINGS = Object.fromEntries(STD_VOICING_LIST.map(v => [v.name, v]))
 
-export const STD_MIX_TYPES = ["Full Mix", "Solo", "Dominant", "Left", "Missing"]
+export const FULL_MIX_TYPE = "Full Mix"
+export const STD_MIX_TYPES = [FULL_MIX_TYPE, "Solo", "Dominant", "Left", "Missing"]
 
-export function fullMixForParts(name: string, parts: Array<string>): StereoMix {
+export function standardMixes(parts: string[]): Record<string, StereoMix[]> {
+    /* The spec for each template is [ltf, lof], [rtf, rof]: left/right-target-factor, left/right-other-factor.
+     * For example, if parts is ['Tenor','Lead','Bari','Bass'], then the 'Left' template will have the spec
+     * { leftFactors: [1, 0], rightFactors: [0, 1/3] }, and the final 'Bari Left' mix will have the spec
+     * { leftFactors: [0, 0, 1, 0], rightFactors: [1/3, 1/3, 0, 1/3] }.
+     */
+    const n = parts.length
+    const templates: Pick<StereoMix, 'name' | 'spec'>[] = [
+        { name: "Solo", spec: { leftFactors: [1, 0], rightFactors: [1, 0] } },
+        { name: "Dominant", spec: { leftFactors: [n/(2*n - 1), 1/n], rightFactors: [n/(2*n - 1), 1/n] } },
+        { name: "Left", spec:  { leftFactors: [1, 0], rightFactors: [0, 1/(n-1)] } },
+        { name: "Missing", spec: { leftFactors: [0, 1/(n-1)], rightFactors: [0, 1/(n-1)]}},
+    ]
+    function mix(template: Partial<StereoMix>, part: string): StereoMix {
+        const left = parts.map(p => p == part ? template.spec.leftFactors[0] : template.spec.leftFactors[1])
+        const right = parts.map(p => p == part ? template.spec.rightFactors[0] : template.spec.rightFactors[1])
+        return {
+            name: `${part} ${template.name}`,
+            spec: { leftFactors: left, rightFactors: right },
+            parts: parts,
+            pitchShift: 0,
+            speedFactor: 1
+        }
+    }
+    type Entry = [string, StereoMix[]]
+    const mixesByType: Entry[] = [[FULL_MIX_TYPE, [fullMixForParts(parts)]] as Entry]
+        .concat(templates.map(t => [t.name, parts.map(p => mix(t, p))] as Entry))
+
+    return Object.fromEntries(mixesByType)
+}
+
+export function fullMixForParts(parts: string[]): StereoMix {
     const n = parts.length
     return {
-        name,
+        name: FULL_MIX_TYPE,
         parts,
-        spec: { leftFactors: Array(n).fill(1 / n), rightFactors: Array(n).fill(1 / n) },
+        spec: { leftFactors: parts.map(() => 1/n), rightFactors: parts.map(() => 1/n) },
         pitchShift: 0,
         speedFactor: 1
     }

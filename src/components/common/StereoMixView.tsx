@@ -9,12 +9,13 @@ import { OutlinedInput } from '@mui/material';
 import { PitchAndSpeedControl } from './PitchAndSpeedControl';
 
 export interface StereoMixViewProps {
-    mix: StereoMix;
-    isEditable?: boolean;
+    mix: StereoMix
+    isEditable?: boolean
+    maxLevel?: number
     onMixChange?: (mix: StereoMix) => void
 }
 
-export default function StereoMixView({ mix, isEditable = false, onMixChange }: StereoMixViewProps) {
+export default function StereoMixView({ mix, isEditable = false, maxLevel = 1.0, onMixChange }: StereoMixViewProps) {
     // console.log(`StereoMixView: name=${name}, spec=${spec}, parts=${parts}`)
     const { spec: { leftFactors, rightFactors }, parts, pitchShift, speedFactor } = mix
 
@@ -26,8 +27,8 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
     const updateFactors = (factors: number[], index: number, newValue: number): number[] => {
         const newFactors = [...factors];
         const oldValue = factors[index];
-        const oldOtherTotal = 1.0 - oldValue;
-        const newOtherTotal = 1.0 - newValue;
+        const oldOtherTotal = maxLevel - oldValue;
+        const newOtherTotal = maxLevel - newValue;
         if (oldOtherTotal == 0.0) {
             for (let i = 0; i < factors.length; i++) {
                 if (i == index) {
@@ -97,6 +98,7 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                             <Grid container spacing={1} alignItems="center">
                                 <Grid size={8}>
                                     <Slider
+                                        color={leftFactors[i] ?? 0 > 1 ? 'warning' : 'primary'}
                                         value={leftFactors[i] ?? 0}
                                         min={0}
                                         max={1}
@@ -115,6 +117,7 @@ export default function StereoMixView({ mix, isEditable = false, onMixChange }: 
                             <Grid container spacing={1} alignItems="center">
                                 <Grid size={8}>
                                     <Slider
+                                        color={rightFactors[i] ?? 0 > 1 ? 'warning' : 'primary'}
                                         value={rightFactors[i] ?? 0}
                                         min={0}
                                         max={1}

@@ -27,7 +27,6 @@ export interface SongClient {
     deleteTrack: (trackId: string) => Promise<void>
     listParts: () => Promise<PartTrack[]>
     listMixes: () => Promise<MixTrack[]>
-    listDefaultMixes: () => Promise<StereoMix[]>
     getText: () => Promise<TimedTextData>
     putText: (data: TimedTextData) => Promise<void>
     uploadPart: (name: string, audioFile: File) => Promise<PartTrack>
@@ -164,10 +163,6 @@ export function useBackend() : Backend {
             const response = await client.get(`${this.basePath}/mixes`);
             return response.data.map(mixTrackDtoToMixTrack);
         }
-        async listDefaultMixes() {
-            const response = await client.get(`${this.basePath}/defaultMixes`);
-            return response.data.map(mixDtoToMix);
-        }
         async getText() {
             const response = await client.get(`${this.basePath}/text`);
             return new TimedTextData(response.data)
@@ -243,7 +238,6 @@ export function useBackend() : Backend {
     async function waitForTask(taskId: string): Promise<Task | null> {
         for (;;) {
             const task = await getTask(taskId)
-            console.debug(`Task: ${JSON.stringify(task)}`)
             if (task.ended) {
                 return task;
             }

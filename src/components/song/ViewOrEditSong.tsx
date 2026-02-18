@@ -29,7 +29,7 @@ export interface ViewOrEditSongProps {
 export default function ViewOrEditSong({ isEditingSong=false }: ViewOrEditSongProps) {
 
     const { songId, part: selectedPart, mixName: selectedMixName } = useParams();
-    const { songState: [song, setSong], reload, dataPromise, reloadData, setChildProps } = useOutletContext<SongPageContext>()
+    const { songState: [song, setSong], reload, asyncData, reloadAsyncData, setChildProps } = useOutletContext<SongPageContext>()
 
     if (song.id != songId) {
         throw new Error(`Unexpected discrepancy: song ID from params (${songId}) is different from passed song (${song.id})`)
@@ -185,7 +185,8 @@ export default function ViewOrEditSong({ isEditingSong=false }: ViewOrEditSongPr
                         typeColumns={[
                             { field: 'part', headerName: 'Part', type: 'string', width: 80 },
                         ]}
-                        fetchTracks={() => songClient.listParts()}
+                        trackPromise={asyncData.parts}
+                        reloadTracks={() => reloadAsyncData('parts')}
                         idProp="part"
                         selected={selectedPart}
                         // TODO [SCRUM-38] allow deletion of parts that aren't included in a mix
@@ -194,7 +195,7 @@ export default function ViewOrEditSong({ isEditingSong=false }: ViewOrEditSongPr
                         playButtonPath={`/songs/${songId}/part/{id}/play`}
                         addDialog={UploadPartDialog}
                     />
-                    <SongDataList song={song as Song} dataPromise={dataPromise} reloadData={reloadData}/>
+                    <SongDataList song={song as Song} dataPromise={asyncData.text} reloadData={() => reloadAsyncData('text')}/>
                 </Stack>
                 <Box sx={{ width: '50%' }}>
                     <TrackList
@@ -203,7 +204,8 @@ export default function ViewOrEditSong({ isEditingSong=false }: ViewOrEditSongPr
                         typeColumns={[
                             { field: 'trackId', headerName: 'Mix', type: 'string', width: 160 },
                         ]}
-                        fetchTracks={() => songClient.listMixes().then(l => l.filter(t => t.trackId != 'All'))}
+                        trackPromise={asyncData.mixes.then(l => l.filter(t => t.trackId != 'All'))}
+                        reloadTracks={() => reloadAsyncData('mixes')}
                         idProp="name"
                         selected={selectedMixName}
                         onFoundSelected={handleFoundSelected}

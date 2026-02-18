@@ -13,7 +13,7 @@ import { SheetMusicViewerContext } from "../sheet/SheetMusicViewerContext";
 import { SongPageContext } from "../song/SongPage";
 
 export default function EditMeasures() {
-    const { songState: [song, setSong], dataPromise, reloadData, setChildProps } = useOutletContext<SongPageContext>()
+    const { songState: [song, setSong], asyncData, reloadAsyncData, setChildProps } = useOutletContext<SongPageContext>()
 
     const backend = useBackend()
     const notifications = useNotifications()
@@ -40,9 +40,9 @@ export default function EditMeasures() {
 
     const loadData = React.useCallback(async () => {
         setIsSaving(false)
-        const fetchedData = (await dataPromise)?.getPart(TIMED_TEXT_SHARED_PART)['MEASURES'] ?? []
+        const fetchedData = (await asyncData.text)?.getPart(TIMED_TEXT_SHARED_PART)['MEASURES'] ?? []
         setMeasureTimes(fetchedData)
-    }, [setIsSaving, setSong, dataPromise])
+    }, [setIsSaving, setSong, asyncData.text])
 
     const handleSave = React.useCallback(async () => {
         setIsSaving(true)
@@ -50,13 +50,13 @@ export default function EditMeasures() {
             await songClient.part(TIMED_TEXT_SHARED_PART).putText("MEASURES", measureTimes)
             notifications.show('Measure timing saved', { severity: 'success', autoHideDuration: 2000 })
             setIsEditing(false)
-            reloadData()
+            reloadAsyncData('text')
         } catch (saveError) {
             notifications.show(`Failed to save measure timing: ${(saveError as Error).message}`, { severity: 'error' })
         } finally {
             setIsSaving(false)
         }
-    }, [measureTimes, songClient, notifications, setIsSaving, setIsEditing, reloadData])
+    }, [measureTimes, songClient, notifications, setIsSaving, setIsEditing, reloadAsyncData])
 
     const handleClear = React.useCallback(async() => {
         const confirmed = await dialogs.confirm(

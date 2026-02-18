@@ -11,7 +11,7 @@ import LoadingComponent from "../common/LoadingComponent";
 import { SongPageContext } from "../song/SongPage";
 
 export default function EditBookmarks() {
-    const { songState: [song, setSong], reloadData, dataPromise, setChildProps } = useOutletContext<SongPageContext>()
+    const { songState: [song, setSong], reloadAsyncData, asyncData, setChildProps } = useOutletContext<SongPageContext>()
 
     const backend = useBackend()
     const notifications = useNotifications()
@@ -51,9 +51,9 @@ export default function EditBookmarks() {
         if (!song.mediaUrl) {
             throw new Error("This page requires that the song have media in order to set bookmarks, but this song doesn't.")
         }
-        const fetchedBookmarks = (await dataPromise)?.getType('BOOKMARKS')
+        const fetchedBookmarks = (await asyncData.text)?.getType('BOOKMARKS')
         setBookmarks(fetchedBookmarks)
-    }, [setIsSaving, setBookmarks, dataPromise])
+    }, [setIsSaving, setBookmarks, asyncData.text])
 
     const handleSave = React.useCallback(async () => {
         setIsSaving(true)
@@ -61,13 +61,13 @@ export default function EditBookmarks() {
             await songClient.putText(TimedTextData.forType('BOOKMARKS', bookmarks))
             notifications.show('Measure timing saved', { severity: 'success', autoHideDuration: 2000 })
             setIsEditing(false)
-            reloadData()
+            reloadAsyncData('text')
         } catch (saveError) {
             notifications.show(`Failed to save measure timing: ${(saveError as Error).message}`, { severity: 'error' })
         } finally {
             setIsSaving(false)
         }
-    }, [bookmarks, songClient, notifications, setIsSaving, setIsEditing, reloadData])
+    }, [bookmarks, songClient, notifications, setIsSaving, setIsEditing, reloadAsyncData])
 
     /**
      * Apply the given function to the list of bookmarks for the selected part

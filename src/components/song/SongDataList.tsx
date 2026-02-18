@@ -8,6 +8,7 @@ import { Song, TIMED_TEXT_DATA_TYPES, TimedTextData } from "../../types";
 import LoadingComponent from "../common/LoadingComponent";
 import { TableHeader, TableToolbar } from "../common/TableHeader";
 import { isEmpty } from "../utils";
+import { SongAsyncData } from "./SongPage";
 
 export interface SongDataListProps {
     song: Song
@@ -21,8 +22,8 @@ export default function SongDataList({song, dataPromise, reloadData}: SongDataLi
     const navigate = useNavigate();
 
     const loadData = React.useCallback(async () => {
-        setTimedData((await dataPromise))
-        console.log(`Data: ${JSON.stringify((await dataPromise))}`)
+        setTimedData(await dataPromise)
+        // console.log(`Data: ${JSON.stringify((await dataPromise))}`)
     }, [setTimedData, dataPromise])
 
     function editUrl(type: string) { return `/songs/${song.id}/data/${type.toLowerCase()}` }

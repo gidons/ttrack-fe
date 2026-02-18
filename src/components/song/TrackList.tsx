@@ -28,8 +28,9 @@ export interface AddTrackDialogProps {
 interface TrackListProps {
     song: Song;
     title: string;
-    typeColumns: GridColDef[];
-    fetchTracks: (songId: string) => Promise<Track[]>;
+    typeColumns: GridColDef[]
+    trackPromise: Promise<Track[]>
+    reloadTracks: () => void
     idProp: string;
     /** The selected track ID, if any */ 
     selected?: string;
@@ -82,7 +83,8 @@ export function TrackList({
     song,
     title,
     typeColumns, 
-    fetchTracks, 
+    trackPromise,
+    reloadTracks,
     selected,
     onFoundSelected,
     playButtonPath,
@@ -123,7 +125,7 @@ export function TrackList({
             );
             if (confirmed) {
                 await songClient.deleteTrack(row.url)
-                setIsLoading(true)
+                reloadTracks()
             }
         } else {
             await dialogs.alert(`Track ${row.trackId} may not be deleted at this time.`)
@@ -184,19 +186,27 @@ export function TrackList({
         ])), [handleDownload, handleEdit, handleRowDelete, canDelete]);
 
     const loadData = React.useCallback(async () => {
-        const fetchedTracks = await fetchTracks(song.id)
+        const fetchedTracks = await trackPromise
         setTracks(fetchedTracks)
         findSelectedTrack()
-    }, [setTracks, findSelectedTrack, song])
+    }, [setTracks, findSelectedTrack, song, trackPromise])
+
+    React.useEffect(() => {
+        // intentionally don't set isLoading here, so the UI doesn't show loading on refresh
+        loadData()
+    }, [trackPromise])
 
     const handleAdd = React.useCallback(async () => {
         setAddDialogTargetTrackId(null)
         setIsAddDialogOpen(true)
     }, [setIsAddDialogOpen])
 
-    const handleAddClose = React.useCallback(() => { 
+    const handleAddClose = React.useCallback((success: boolean) => { 
         setIsAddDialogOpen(false)
         setAddDialogTargetTrackId(null)
+        if (success) {
+            reloadTracks()
+        }
     }, [setIsAddDialogOpen])
 
     function findSelectedTrack() {
@@ -218,7 +228,7 @@ export function TrackList({
                 <TableToolbar>
                     <Tooltip title="Reload data" placement="right" enterDelay={1000}>
                         {isLoading ? <CircularProgress size={20}/> :
-                        <IconButton size="small" aria-label="refresh" onClick={() => setIsLoading(true)}>
+                        <IconButton size="small" aria-label="refresh" onClick={reloadTracks}>
                             <Refresh/>
                         </IconButton>}
                     </Tooltip>
@@ -233,6 +243,9 @@ export function TrackList({
                     </Button>
                 </TableToolbar>
             </TableHeader>
+            {/* Note: the loading UI will only show up on the initial load or when the song changes.
+                Adding/removing/changing tracks will reload the tracks, but not set isLoading=true,
+                so the changes will be reflected "live" in the table UI. */}
             <LoadingComponent
                 loadData={loadData}
                 isLoading={isLoading}
