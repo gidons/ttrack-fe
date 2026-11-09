@@ -181,7 +181,7 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
                 togglePlay()
             } else if (ev.key === 'm' || ev.key === 'M') {
                 ev.preventDefault()
-                onMark()
+                onMark?.()
             } else if (ev.key === 'ArrowRight') {
                 ev.preventDefault()
                 step(1)
@@ -192,7 +192,7 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [currentMs, playing])
+    }, [currentMs, playing, onMark])
 
     const handleSpinnerChange = (v: string) => {
         const pct = v.replace('%', '')

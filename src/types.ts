@@ -192,8 +192,9 @@ export class TimedTextData {
                 .map(e => [e[0], e[1][type]]))
     }
 
+    /** The entries for the given part, by type. Empty if the part has no data. */
     getPart(part: string): TimedTextByType {
-        return this.entriesByPartAndType[part]
+        return this.entriesByPartAndType[part] ?? {}
     }
 }
 

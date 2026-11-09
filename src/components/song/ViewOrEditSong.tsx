@@ -53,9 +53,12 @@ export default function ViewOrEditSong({ isEditingSong=false }: ViewOrEditSongPr
         setChildProps({})
     }, [])
 
+    // This component also serves the part/mix "play" routes. The edit page is a sibling
+    // of those routes, so the path must be absolute: a relative one would resolve
+    // underneath the current play route (e.g. .../mix/<name>/play/edit), which doesn't exist.
     const handleSongEdit = React.useCallback(() => {
-        navigate(`./edit`)
-    }, [navigate]);
+        navigate(`/songs/${songId}/edit`)
+    }, [navigate, songId]);
 
     const handleSongDelete = React.useCallback(async () => {
         const confirmed = await dialogs.confirm(

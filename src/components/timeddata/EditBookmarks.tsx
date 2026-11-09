@@ -51,40 +51,42 @@ export default function EditBookmarks() {
         if (!song.mediaUrl) {
             throw new Error("This page requires that the song have media in order to set bookmarks, but this song doesn't.")
         }
-        const fetchedBookmarks = (await asyncData.text)?.getType('BOOKMARKS')
-        setBookmarks(fetchedBookmarks)
+        const fetchedBookmarks = (await asyncData.text)?.getType('BOOKMARKS') ?? {}
+        // getType() has an entry for every part that has data of any type, with
+        // an undefined value if the part has no bookmarks. Keep only real lists.
+        setBookmarks(Object.fromEntries(Object.entries(fetchedBookmarks).filter(e => e[1] != null)))
     }, [setIsSaving, setBookmarks, asyncData.text])
 
     const handleSave = React.useCallback(async () => {
         setIsSaving(true)
         try {
             await songClient.putText(TimedTextData.forType('BOOKMARKS', bookmarks))
-            notifications.show('Measure timing saved', { severity: 'success', autoHideDuration: 2000 })
+            notifications.show('Bookmarks saved', { severity: 'success', autoHideDuration: 2000 })
             setIsEditing(false)
             reloadAsyncData('text')
         } catch (saveError) {
-            notifications.show(`Failed to save measure timing: ${(saveError as Error).message}`, { severity: 'error' })
+            notifications.show(`Failed to save bookmarks: ${(saveError as Error).message}`, { severity: 'error' })
         } finally {
             setIsSaving(false)
         }
     }, [bookmarks, songClient, notifications, setIsSaving, setIsEditing, reloadAsyncData])
 
     /**
-     * Apply the given function to the list of bookmarks for the selected part
+     * Apply the given function to the list of bookmarks for the selected part. The
+     * part may not have a list yet (it has no bookmarks), in which case the function
+     * is applied to an empty list and the result is added.
      * TODO: Consider tracking the selected bookmarks as separate state, and only copying
      * them back to the overall map on-demand, i.e. when saving or when switching parts.
      */
     const setSelectedBookmarks = React.useCallback((func: (prev: TimedTextEntry[]) => TimedTextEntry[]) => {
-        setBookmarks(prev => Object.fromEntries(
-            Object.entries(prev).map(e => [e[0], e[0] == selectedPart ? func(e[1]) : e[1]])
-        ))
+        setBookmarks(prev => ({ ...prev, [selectedPart]: func(prev[selectedPart] ?? []) }))
     }, [setBookmarks, selectedPart])
 
     const handleClear = React.useCallback(async() => {
         const confirmed = await dialogs.confirm(
             `Are you sure you want to clear all the bookmarks for ${selectedPart}?`,
             {
-                title: `Clear measure times for ${selectedPart}?`,
+                title: `Clear bookmarks for ${selectedPart}?`,
                 severity: 'error',
                 okText: 'Clear',
                 cancelText: 'Cancel',
@@ -93,11 +95,13 @@ export default function EditBookmarks() {
         if (confirmed) {
             setSelectedBookmarks(() => [])
         }
-    }, [setBookmarks, dialogs]);
+    }, [selectedPart, setSelectedBookmarks, dialogs]);
 
     const handleMark = React.useCallback(() => {
+        // The keyboard shortcut can trigger this even when the mark button is disabled.
+        if (!isEditing) { return }
         setSelectedBookmarks(prev => prev.concat({ t: playPositionMs, v: "" }).sort((a,b) => a.t - b.t))
-    }, [playPositionMs, setSelectedBookmarks])
+    }, [isEditing, playPositionMs, setSelectedBookmarks])
 
     const handleDescriptionChange = React.useCallback((index: number, value: string) => {
         setSelectedBookmarks(prev => prev.map((e, i) => i === index ? { ...e, v: value } : e))        
