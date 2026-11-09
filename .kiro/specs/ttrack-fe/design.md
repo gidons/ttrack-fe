@@ -351,9 +351,25 @@ and the zip button's states.
 - **`OpenSheetMusicDisplay.tsx`** — class-component wrapper (adapted from the
   official react-opensheetmusicdisplay wrapper) around OSMD: on mount creates an
   `OSMD(div, { autoResize, pageBackgroundColor, drawingParameters:'default' })`,
-  loads `sheetUrl`, sets zoom, renders, then calls `onRender(osmd)`;
-  `componentDidUpdate` reloads on url/zoom change. (Gotcha: a post-load
-  `sleep(1000)` is not awaited.)
+  loads the score, sets zoom, renders, then calls `onRender(osmd)`;
+  `componentDidUpdate` reloads on url/zoom change. Window resizing is left to
+  OSMD's own `autoResize` handler, which re-renders the score but does not call
+  `onRender`. (Gotcha: a post-load `sleep(1000)` is not awaited.)
+  - **The component downloads the notation itself** (`fetchNotationContent`) and
+    detects the format from the content: a ZIP signature (`PK\x03\x04`) means a
+    compressed `.mxl`, which is passed to OSMD as a binary string; anything else
+    is decoded as UTF-8 text. This is intentional: OSMD can only load a compressed
+    file from a URL if the URL contains `.mxl`, and notation URLs are signed
+    storage URLs with no extension, so handing OSMD the URL makes it reject
+    compressed files.
+  - **Loads are guarded against overlap.** Each load works only on the OSMD
+    instance it started with and is abandoned if a newer load starts or the
+    component unmounts. This is intentional: React StrictMode mounts the component
+    twice in development, and a zoom or URL change can start a load while another
+    is in flight. Rendering whichever instance `this.osmd` points to when a
+    download finishes can render an instance that has not been loaded, which fails
+    with "load() needs to be called before render()".
+  - Load failures are shown in an error alert above the score.
 - **`SheetMusicViewer.tsx`** — wraps the OSMD component and overlays interactive
   measure boxes computed from `osmd.GraphicSheet.MusicPages[0].MusicSystems[*]
   .GraphicalMeasures`, converting OSMD coordinates to pixels with an empirical

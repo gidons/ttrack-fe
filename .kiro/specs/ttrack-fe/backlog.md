@@ -1,53 +1,37 @@
 # Backlog — ttrack-fe
 
-> Tracked items to address. **Not started.** These are captured for planning;
-> each should be investigated and (for bugs) root-caused before implementing.
-> References point at the current code so the eventual fix is grounded in how
+> Open items. Each should be investigated and (for bugs) root-caused before
+> implementing. References point at the current code so a fix is grounded in how
 > things actually work today.
 
 ## Bugs
 
-### B1. "Edit" during playback navigates to a broken URL
+### B1. Existing bookmarks reportedly don't appear in the bookmarks view
 
-**Symptom:** While playing a track (e.g. a mix), clicking the "Edit" button to
-edit song metadata navigates to `<song-url>/mix/<mix-name>/edit` instead of
-`<song-url>/edit`, which is broken.
+**Symptom (as reported):** Existing bookmarks don't show up in the bookmarks
+editor.
 
-**Context:** Playback is URL-driven. Routes `part/:part/play` and
-`mix/:mixName/play` render `ViewOrEditSong`, which selects the track from the URL
-params (`src/main.tsx`; `src/components/song/ViewOrEditSong.tsx`). The Edit
-button calls `navigate('./edit')` (a relative path), which resolves against the
-current `.../play` URL rather than the song root.
+**Status:** Not reproduced. With data in the backend's wire format
+(`{ part: { BOOKMARKS: [{ t, v }] } }`), the editor shows shared (`ALL`)
+bookmarks by default and a voice part's bookmarks once that part is selected in
+the "Bookmarks for" dropdown. Bookmarks stored under a voice part do not appear
+while "All Parts" is selected. Needs the specific song and the part its
+bookmarks belong to.
 
-**Decision needed (compare options before fixing):**
-- Disable the Edit button during playback, or
-- Make playback not URL-based (local selection state instead of a route), or
-- Make edit not URL-based / use an absolute navigation target
-  (`/songs/:songId/edit`), or
-- Another approach.
+**Context:** `src/components/timeddata/EditBookmarks.tsx`; the page loads
+`asyncData.text.getType('BOOKMARKS')`.
 
-Note: option 5 (tab-based rework, F2 below) may change or remove the URL-driven
-playback model, so coordinate B1 with F2.
+### B2. Measure and bookmark regions may be stale after a window resize
 
-### B2. Bookmarks view non-functional
+**Symptom (unverified, from reading the code):** OSMD re-renders the score when
+the window is resized, and the measures can move to different systems. The
+clickable and highlighted measure regions in `SheetMusicViewer` are computed only
+from the `onRender` callback after a load, so they may stay at their old
+positions.
 
-**Symptom:** Existing bookmarks don't show up, and in edit mode the "add
-bookmark" button appears to do nothing.
-
-**Context:** `src/components/timeddata/EditBookmarks.tsx`. Investigate the load
-path (`asyncData.text.getType('BOOKMARKS')`), the merge of shared `ALL` bookmarks
-with the selected part, and the add handler that should append
-`{ t: playPositionMs, v: "" }`.
-
-### B3. Measures view crashes when there is no existing measure data
-
-**Symptom:** Error `undefined is not an object (evaluating
-'(await n.text)?.getPart(Pu).MEASURES')`.
-
-**Context:** `src/components/timeddata/EditMeasures.tsx`. It reads
-`asyncData.text.getPart('ALL')['MEASURES']`; `getPart` returns `undefined` when
-the `ALL` part has no entries, so indexing `['MEASURES']` throws. Needs a
-null-safe access / default to an empty list.
+**Context:** `src/components/sheet/OpenSheetMusicDisplay.tsx`,
+`src/components/sheet/SheetMusicViewer.tsx`. A fix would handle resize in the
+wrapper (with OSMD's `autoResize` off) and call `onRender` after each re-render.
 
 ## Features
 
@@ -72,5 +56,7 @@ and the player / mix widget on the right.
 
 **Context:** Current detail page renders the metadata form plus side-by-side
 Parts/Mixes `TrackList`s and a `SongDataList`, with a separate "now playing"
-panel. Building blocks to reuse: `TrackList`, `AudioPlayer`, `StereoMixView`,
-`SongDataList`. Consider interaction with the URL-driven playback model (see B1).
+panel. Playback is URL-driven: the routes `part/:part/play` and
+`mix/:mixName/play` render `ViewOrEditSong`, which selects the track from the URL
+params, and opening the edit page ends playback. Building blocks to reuse:
+`TrackList`, `AudioPlayer`, `StereoMixView`, `SongDataList`.
