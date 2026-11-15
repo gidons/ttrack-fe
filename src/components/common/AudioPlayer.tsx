@@ -11,14 +11,35 @@ export interface AudioPlayerProps {
     positionMs: number
     onMark?: () => void
     onTime: (posMs: number) => void
+    /** Called with the length of the audio, in ms, once it is known. */
+    onDuration?: (durationMs: number) => void
 }
 
-export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, actions, onMark, onTime }: AudioPlayerProps) {
+/** What a host can ask the player to do, through a ref. */
+export interface AudioPlayerHandle {
+    /** Move to the given position, in ms. */
+    seekToMs: (ms: number) => void
+    /** Play from startMs and pause exactly at endMs. */
+    playInterval: (startMs: number, endMs: number) => void
+    /** The exact current position, in ms (more precise than the position reported through onTime). */
+    getPositionMs: () => number
+}
+
+/** When this close to the end of an interval, stop using animation frames and set a timer for the exact end. */
+const FINAL_STRETCH_MS = 60
+
+const AudioPlayer = React.forwardRef<AudioPlayerHandle, AudioPlayerProps>(function AudioPlayer(
+        { mediaUrl, positionMs: currentMs, marks, actions, onMark, onTime, onDuration }, ref) {
     const audioRef = React.useRef<HTMLAudioElement | null>(null)
     const trackRef = React.useRef<HTMLDivElement | null>(null)
     const [playing, setPlaying] = React.useState(false)
     const [durationMs, setDurationMs] = React.useState(0)
     const [spinnerValue, setSpinnerValue] = React.useState('100%')
+    // Cancels the pending stop of playInterval(), if there is one.
+    const cancelStopRef = React.useRef<(() => void) | null>(null)
+    // The listener effect below runs once, so it reads the latest callback through a ref.
+    const onDurationRef = React.useRef(onDuration)
+    onDurationRef.current = onDuration
 
     // console.log(`Marks: ${JSON.stringify(marks)}`)
 
@@ -26,12 +47,22 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
         onTime(ms)
     }, [onTime])
 
+    const cancelStop = React.useCallback(() => {
+        cancelStopRef.current?.()
+        cancelStopRef.current = null
+    }, [])
+
+    // Don't leave a pending stop behind when the player goes away.
+    React.useEffect(() => cancelStop, [cancelStop])
+
     // Attach audio event listeners
     React.useEffect(() => {
         const a = audioRef.current
         if (!a) return
         const onLoaded = () => {
-            setDurationMs(Math.floor((isNaN(a.duration) ? 0 : a.duration) * 1000))
+            const ms = Math.floor((isNaN(a.duration) ? 0 : a.duration) * 1000)
+            setDurationMs(ms)
+            if (ms > 0) { onDurationRef.current?.(ms) }
         }
         const onTime = () => {
             setMs(Math.round(a.currentTime * 1000))
@@ -42,6 +73,7 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
         a.addEventListener('timeupdate', onTime)
         a.addEventListener('play', onPlay)
         a.addEventListener('pause', onPause)
+        if (a.readyState >= 1) { onLoaded() }
         return () => {
             a.removeEventListener('loadedmetadata', onLoaded)
             a.removeEventListener('timeupdate', onTime)
@@ -53,6 +85,7 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
     // Reset when media changes
     React.useEffect(() => {
         const a = audioRef.current
+        cancelStop()
         setMs(0)
         setDurationMs(0)
         setSpinnerValue('100%')
@@ -66,6 +99,7 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
     const togglePlay = async () => {
         const a = audioRef.current
         if (!a) return
+        cancelStop()
         if (playing) {
             a.pause()
         } else {
@@ -81,10 +115,59 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
     const seekToMs = (ms: number) => {
         const a = audioRef.current
         if (!a || !isFinite(ms)) return
+        cancelStop()
         const secs = Math.max(0, Math.min(ms / 1000, isNaN(a.duration) ? Infinity : a.duration))
         try { a.currentTime = secs } catch (err) { console.warn('seek failed', err) }
         setMs(Math.round(secs * 1000))
     }
+
+    /**
+     * Play from startMs and pause exactly at endMs. The audio element's 'timeupdate' event only
+     * fires a few times a second, which is far too coarse, so the end is watched on animation
+     * frames and, for the final stretch, with a timer set for the remaining time.
+     */
+    const playInterval = (startMs: number, endMs: number) => {
+        const a = audioRef.current
+        if (!a || !isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) return
+        seekToMs(startMs)  // also cancels any earlier interval
+        const endSec = endMs / 1000
+        let frame = 0
+        let timer = 0
+        let cancelled = false
+        const finish = () => {
+            if (cancelled) return
+            cancelStopRef.current = null
+            cancelled = true
+            a.pause()
+            try { a.currentTime = endSec } catch (err) { console.warn('seek failed', err) }
+            setMs(endMs)
+        }
+        const watch = () => {
+            if (cancelled) return
+            const remainingMs = ((endSec - a.currentTime) * 1000) / (a.playbackRate || 1)
+            if (remainingMs <= 0) {
+                finish()
+            } else if (remainingMs <= FINAL_STRETCH_MS) {
+                timer = window.setTimeout(finish, remainingMs)
+            } else {
+                frame = window.requestAnimationFrame(watch)
+            }
+        }
+        cancelStopRef.current = () => {
+            cancelled = true
+            window.cancelAnimationFrame(frame)
+            window.clearTimeout(timer)
+        }
+        a.play()
+            .then(() => { if (!cancelled) { frame = window.requestAnimationFrame(watch) } })
+            .catch(err => { console.warn('play failed', err); cancelStop() })
+    }
+
+    React.useImperativeHandle(ref, () => ({
+        seekToMs,
+        playInterval,
+        getPositionMs: () => Math.round((audioRef.current?.currentTime ?? 0) * 1000),
+    }))
 
     const step = (deltaSec: number) => {
         const a = audioRef.current
@@ -287,4 +370,6 @@ export default function AudioPlayer({ mediaUrl, positionMs: currentMs, marks, ac
             </Box>
         </Stack>
     )
-}
+})
+
+export default AudioPlayer

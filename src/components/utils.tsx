@@ -17,6 +17,23 @@ export async function sleep(ms: number) {
   });
 }
 
+/**
+ * Scroll `container`, and nothing else, so that `el` is vertically centered in it. Does nothing if
+ * `el` is already fully visible. Unlike el.scrollIntoView(), this does not also scroll the page or
+ * any other scrollable ancestor, which would move other panes out of view.
+ */
+export function scrollIntoContainerView(container: HTMLElement, el: HTMLElement, margin = 8) {
+  const c = container.getBoundingClientRect()
+  const e = el.getBoundingClientRect()
+  if (e.top >= c.top + margin && e.bottom <= c.bottom - margin) { return }
+  const top = container.scrollTop + ((e.top + e.bottom) - (c.top + c.bottom)) / 2
+  if (typeof container.scrollTo === 'function') {
+    container.scrollTo({ top, behavior: 'smooth' })
+  } else {
+    container.scrollTop = top
+  }
+}
+
 export function isEmpty(obj: object) {
   return Object.keys(obj ?? {}).length === 0
 }

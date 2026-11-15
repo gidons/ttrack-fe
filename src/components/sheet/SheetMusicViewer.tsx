@@ -8,6 +8,7 @@ import { Box, SxProps, Typography } from '@mui/material';
 import { GraphicalMeasure, OpenSheetMusicDisplay as OSMD, RectangleF2D } from 'opensheetmusicdisplay';
 import React, { MouseEvent, useContext, useRef, useEffect } from 'react';
 import OSMDComponent from './OpenSheetMusicDisplay';
+import { scrollIntoContainerView } from '../utils';
 import { SheetMusicViewerContext } from './SheetMusicViewerContext';
 
 /**
@@ -20,9 +21,17 @@ import { SheetMusicViewerContext } from './SheetMusicViewerContext';
  */
 class MeasureBox {
     readonly measure: GraphicalMeasure
+    /**
+     * The 1-based position of the measure in the score. This is used everywhere a
+     * measure number is shown, reported, or looked up. It is deliberately not OSMD's
+     * GraphicalMeasure.MeasureNumber: OSMD numbers a pickup (anacrusis) measure 0 and
+     * offsets every later measure by one from the printed numbers.
+     */
+    readonly number: number
     readonly box: RectangleF2D
     constructor(measure: GraphicalMeasure) {
         this.measure = measure
+        this.number = measure.parentSourceMeasure.measureListIndex + 1
         const bbox = measure.ParentMusicSystem.GroupBrackets[0].PositionAndShape
         const mbox = measure.PositionAndShape
         this.box = new RectangleF2D(mbox.AbsolutePosition.x, bbox.AbsolutePosition.y, mbox.Size.width, bbox.Size.height)
@@ -55,7 +64,7 @@ function MeasureHighlight({
             sx={{...sx, position: 'absolute', left: r.x, width: r.width, top: r.y, height: r.height }}
         >
             { showNumber && 
-            <Typography color='black' variant='h4'>{mb.measure.MeasureNumber}</Typography>
+            <Typography color='black' variant='h4'>{mb.number}</Typography>
             }
         </Box>
     )
@@ -80,7 +89,7 @@ export default function SheetMusicViewer({
     const [measureBoxes, setMeasureBoxes] = React.useState<Array<MeasureBox>>([])
     const context = useContext(SheetMusicViewerContext)
     const { zoom } = context
-    const highlightedMeasure = highlightedMeasureNum > 0 ? measureBoxes?.at(highlightedMeasureNum - 1) : null
+    const highlightedMeasure = highlightedMeasureNum > 0 ? measureBoxes?.find(mb => mb.number === highlightedMeasureNum) : null
     const containerRef = useRef<HTMLDivElement | null>(null)
     const highlightRef = useRef<HTMLDivElement | null>(null)
 
@@ -89,21 +98,10 @@ export default function SheetMusicViewer({
     useEffect(() => {
         if (!highlightedMeasure) { return }
         const el = highlightRef.current
-        if (el) {
-            // scrollIntoView will scroll the nearest scrollable ancestor (the container)
-            try {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            } catch {
-                // fallback: adjust container scrollTop manually
-                if (containerRef.current) {
-                    const container = containerRef.current
-                    const rect = el.getBoundingClientRect()
-                    const crect = container.getBoundingClientRect()
-                    const offset = rect.top - crect.top
-                    container.scrollTop += offset - (crect.height / 2) + (rect.height / 2)
-                }
-            }
-        }
+        const container = containerRef.current
+        // Scroll only the viewer: element.scrollIntoView() would also scroll the page and
+        // move the other panes (e.g. the measure list) out of view.
+        if (el && container) { scrollIntoContainerView(container, el) }
     }, [highlightedMeasure, measureBoxes])
 
     const updateMeasures = React.useCallback((osmd: OSMD) => {
@@ -134,7 +132,7 @@ export default function SheetMusicViewer({
         })
         if (target) {
             console.debug(`target: ${JSON.stringify(target.box)}`)
-            onClickMeasure(target.measure.MeasureNumber)
+            onClickMeasure(target.number)
         }
     },[measureBoxes, onClickMeasure, zoom])
 
@@ -147,7 +145,7 @@ export default function SheetMusicViewer({
                 <MeasureHighlight 
                     measureBox={mb}
                     // sx={{border: '2px solid red', background: 'lightyellow', opacity: '30%'}}
-                    key={`measure-${mb.measure.MeasureNumber}`}/>))}
+                    key={`measure-${mb.number}`}/>))}
             {highlightedMeasure && (
                 <MeasureHighlight 
                     sx={{ border: '2px dashed black', background: 'lightyellow', opacity: '30%', ...highlightSx }}
