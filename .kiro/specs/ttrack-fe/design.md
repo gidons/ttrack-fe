@@ -332,6 +332,16 @@ and the zip button's states.
   `actions`, and a speed `ValueSpinner` (50–150%). Keyboard (when not in an
   input): Space=play/pause, M=`onMark`, ←/→=step 1s. Reports position up via
   `onTime` (ms); resets on `mediaUrl` change.
+  - **Imperative handle (`AudioPlayerHandle`, via `ref`):** `seekToMs(ms)`,
+    `getPositionMs()` (the element's exact position, rather than the one reported
+    through `onTime`, which updates only a few times a second), and
+    `playInterval(startMs, endMs)`, which seeks to `startMs`, plays, and pauses
+    at `endMs`. An optional `onDuration` prop reports the audio length once its
+    metadata has loaded. The native `timeupdate` event only fires a few times a second, so
+    the stop is driven by a `requestAnimationFrame` loop that switches to a
+    `setTimeout` for the final stretch (scaled by the playback rate), then pauses
+    and sets the position to exactly `endMs`. The pending stop is cancelled by
+    pause, seek, a new interval, a media change, or unmount.
 - **`StereoMixView.tsx`** — renders a `StereoMix` as a per-part table of
   Left/Right sliders (0–1) plus numeric readouts and an embedded
   `PitchAndSpeedControl`. `updateFactors` proportionally rebalances the other
@@ -376,6 +386,13 @@ and the zip button's states.
   scale. Supports `highlightedMeasureNum` (scrolls into view) and
   `onClickMeasure` (hit-tests click coordinates against the boxes). Reads
   zoom/background from `SheetMusicViewerContext`.
+  - **Measure numbers are 1-based positions in the score** (`parentSourceMeasure
+    .measureListIndex + 1`). Highlighting looks a box up by this number, and
+    `onClickMeasure` reports it, so the two always agree. This is intentional:
+    OSMD's own `MeasureNumber` numbers a pickup (anacrusis) measure 0 and offsets
+    every later measure by one from the score's printed numbers, so using it for
+    clicks while highlighting by position made the two disagree by one and made
+    the pickup report 0.
 - **`SheetMusicViewerContext.tsx`** — `{ zoom, autoResize, background }`
   (default zoom 1.0).
 - **`ViewSongSheet.tsx`** — the `data/notation` page. Upload/replace via
@@ -385,14 +402,64 @@ and the zip button's states.
 ### 9.3 Timed-data editors (`components/timeddata`)
 
 - **`EditMeasures.tsx`** (`data/measures`) — edits measure times for the shared
-  `ALL` part, loaded from `asyncData.text.getPart('ALL')['MEASURES']`. In edit
-  mode the user stamps the current play position (via the Bookmark action or the
-  M key) with `nextMeasureNum` (auto-incrementing); a left table lists
-  (time, measure#, delete); the right panel is the `SheetMusicViewer` highlighting
-  the next measure and letting the user click a measure to set `nextMeasureNum`.
-  Requires notation to enable Save/Edit/Clear. Save →
-  `songClient.part('ALL').putText('MEASURES', ...)` → `reloadAsyncData('text')`.
-  (Gotcha: `handleMark` mutates the array in place before `setState`.)
+  `ALL` part, loaded from `asyncData.text.getPart('ALL')['MEASURES']` (empty if
+  the part has no data). In edit mode the user stamps the current play position
+  (via the Bookmark action or the M key) with `nextMeasureNum`
+  (auto-incrementing). A left panel lists the entries in time order; each row is
+  `‹ time ›  number  [edit] [play] [split] [delete]`. The right panel is the
+  `SheetMusicViewer` highlighting the next measure and letting the user click a
+  measure to set `nextMeasureNum`. Requires notation to enable Save/Edit/Clear.
+  Save → `songClient.part('ALL').putText('MEASURES', ...)` →
+  `reloadAsyncData('text')`.
+  - **All list changes go through pure functions in `measureTimes.ts`**
+    (`shiftMeasure`, `canShift`, `splitMeasure`, `renameMeasure`, `deleteMeasure`,
+    `markMeasure`, `allNamed`). They never mutate their input and always return a
+    list sorted by time, so the component only calls `setMeasureTimes` with their
+    result. The shift step is 100 ms.
+  - **Shift** is refused (and its button disabled) if the new time would reach a
+    neighbor's time, go below 0, or pass the audio duration (known once the player
+    reports it). **Split** places the new entry at the midpoint of this measure and
+    the next, and is unavailable for the last measure (its end is unknown). The new
+    entry is named for the next number (23 -> 24), or left blank, with the row
+    opened for naming, if this name isn't a plain number. **Split and delete
+    renumber:** `consecutiveRunAfter` finds the entries right after the one being
+    split or deleted that continue its numbering (N+1, N+2, ... in a row); split
+    increments that run and delete decrements it, and anything else is left alone.
+    This is intentional: a following measure that isn't N+1 means the numbering
+    has a gap (which the new measure fills) or jumps elsewhere (a reprise), and
+    shifting those would make the numbering wrong. Only names that are plain
+    whole numbers take part, so `24a` ends a run. **Mark** moves the entry
+    that already has the same name, or any entry at exactly the same time, and
+    otherwise inserts at its time-ordered position. It is a no-op outside edit
+    mode, because the keyboard shortcut can trigger it while the button is disabled.
+  - **Play** (`aria-label` "play to here", distinct from the player's own "play")
+    calls `AudioPlayerHandle.playInterval(previous.t, this.t)`, with 0 as the
+    previous time for the first measure, and is disabled when the interval is
+    empty.
+  - **Layout and scrolling.** The list panel and the score viewer sit in a row of
+    fixed height, `calc(100vh - 430px)` with a 320 px minimum (430 px approximates
+    the page chrome above the row), and each scrolls on its own. When the current
+    measure changes, the list scrolls to its row (`listRef` / `currentRowRef`) and
+    the viewer scrolls to its highlight, each only if the target is not already
+    visible. Both use `scrollIntoContainerView` in `utils.tsx`, which scrolls only
+    the given container. This is intentional: `element.scrollIntoView()` also
+    scrolls the page and every other scrollable ancestor, which moved the list or
+    the score out of view when the other one was scrolled to a late measure.
+  - **Jump to a measure** (`jumpToMeasure`) is the first step of every row action
+    except delete: it sets `nextMeasureNum` to the entry's name when that is a
+    plain number of at least 1 (which moves the score highlight) and calls
+    `seekToMs` for the entry's time. Shift passes `seek: false` and seeks to the
+    shifted time instead, and play passes `seek: false` because `playInterval`
+    moves the audio itself. Clicking a time is the same action with no other
+    effect. The highlight and the "next measure" field are the same state, so a
+    jump means the next stamp re-stamps that measure. The list row whose name
+    equals `nextMeasureNum` is rendered with MUI's `selected` style.
+  - **Rename** is a single in-place text field (`renamingIndex` / `renameText`
+    state). Enter or the confirm button commits, Escape cancels, and a blank name
+    is not accepted. Any other row change (shift, split, delete, mark, clear) ends
+    it, except that a split that needs a name opens the new row. Save is refused
+    while any entry has a blank name (the row shows a red "?").
+  - **Next-measure field** accepts only whole numbers of at least 1.
 - **`EditBookmarks.tsx`** (`data/bookmarks`) — per-part bookmarks plus a shared
   `ALL` set, loaded from `asyncData.text.getType('BOOKMARKS')`. A part `Select`
   (All Parts + `song.parts`) chooses the editable set; shared bookmarks appear

@@ -216,6 +216,10 @@ timeline, so that I can review audio and place timed markers against it.
    speed control, keyboard shortcuts (space to play/pause, arrow keys to step,
    and a key to drop a marker), and SHALL report the current playback position to
    its host component.
+5. The player SHALL let its host seek to a position and play an interval,
+   pausing at the end of the interval to within a few milliseconds (not merely at
+   the next playback-position update). Any other user action on the player (pause,
+   seek, or starting a different interval) cancels the pending stop.
 
 ### 8. Notation (sheet music)
 
@@ -241,22 +245,72 @@ song, so that the player can display content synchronized to playback.
 #### Acceptance criteria
 
 1. The app SHALL provide a measures editor that associates measure numbers with
-   playback times for the shared (`ALL`) part: while playing, the user can stamp
-   the current position with the next measure number (auto-incrementing), and can
-   click a measure in the rendered score to set the target measure number.
-2. The measures editor SHALL require the song to have notation before measures
-   can be edited, SHALL list the captured (time, measure) entries with per-row
-   delete, and SHALL provide Save and Clear-All (confirmed) actions.
-3. The app SHALL provide a bookmarks editor that manages bookmarks per part plus
+   playback times for the shared (`ALL`) part. Each entry is the time at which
+   that measure **starts**. While playing, the user can stamp the current position
+   with the next measure number (auto-incrementing); stamping a number that
+   already has an entry moves that entry to the current position. The user can
+   click a measure in the rendered score to set the next measure number.
+   Stamping is available only in edit mode, and uses the player's exact current
+   position. Two measures never start at the same time: stamping onto a time that
+   another measure already has replaces that measure.
+2. Measure numbers SHALL be 1-based positions in the score, so the first measure
+   is measure 1, including a pickup (anacrusis) measure. The score viewer's
+   highlighting and click reporting SHALL use this same numbering, so clicking a
+   measure and highlighting that measure number agree.
+3. The measures editor SHALL require the song to have notation before measures
+   can be edited, and SHALL provide Save and Clear-All (confirmed) actions. Save
+   is refused, with a message, while any measure has no name.
+4. The measures editor SHALL list the entries in time order, each row showing
+   `‹ time ›  number  [edit] [play] [split] [delete]`, with these behaviors:
+   1. **Shift:** `‹` and `›` move the measure's time 0.1 s earlier or later. A
+      measure cannot be moved to or past a neighboring measure's time, before the
+      start of the audio, or past its end; the control is disabled at the limit.
+   2. **Rename:** `[edit]` edits the measure number in place. Enter confirms and
+      Escape cancels. A blank name is not accepted. Names are free text, so a
+      score with repeats or endings can use non-unique or non-numeric labels.
+   3. **Play:** `[play]` plays from the previous measure's time to this measure's
+      time and pauses exactly at this measure's time. For the first measure it
+      plays from the start of the audio. It is disabled when the interval is
+      empty.
+   4. **Split:** `[split]` inserts a new measure halfway between this measure and
+      the next one, named with the next number after this one (23 becomes 23, 24).
+      If the measures that follow continue the numbering (24, 25, 26, ...), each of
+      them is incremented by one to make room. A following measure that does not
+      continue the numbering is left alone, and so is everything after it: a gap
+      (25 after 23, which leaves 24 free for the new measure), or a jump elsewhere
+      such as a reprise (20 after 23). If this measure's name is not a plain number,
+      the new one is left blank and its name is opened for editing. The last
+      measure cannot be split, because its end is not known.
+   5. **Delete:** `[delete]` removes the measure. If the measures that follow it
+      continue its numbering (23 deleted, followed by 24, 25, ...), each of them is
+      decremented by one to close the gap; otherwise they are left alone. Only
+      plain whole-number names take part in renumbering, and renaming a measure
+      never renumbers any other.
+   6. **Jump:** clicking a measure's time, or any of its buttons other than
+      delete, jumps to that measure: the score highlights it (and it becomes the
+      next measure to stamp) and the audio moves to its start. Shift moves the
+      audio to the measure's new time, and play plays its own interval instead of
+      seeking first. A measure whose name is not a plain number has no matching
+      measure in the score, so only the audio moves.
+   7. The row of the current measure (the one highlighted in the score) is
+      lightly highlighted in the list.
+   8. The measure list and the score scroll independently of each other and of
+      the page. When the current measure changes, each of them scrolls, if needed,
+      to show that measure, so it can be seen in both at the same time. The two
+      panes are sized to fit the window (with a minimum height), so the page
+      itself does not need to scroll.
+   9. Shift, rename, split, and delete are available only in edit mode. Play and
+      clicking a time are always available.
+5. The app SHALL provide a bookmarks editor that manages bookmarks per part plus
    a shared (`ALL`) set; the user selects which part's bookmarks to edit, sees the
    shared bookmarks merged in (read-only) and sorted by time, and can add a
    bookmark at the current playback position, edit its description, and delete it.
-4. WHEN measures or bookmarks are saved THEN the app SHALL PUT the data to the
+6. WHEN measures or bookmarks are saved THEN the app SHALL PUT the data to the
    backend and refresh the song's timed-text data.
-5. The song detail page SHALL present a "non-audio data" summary listing MusicXML,
+7. The song detail page SHALL present a "non-audio data" summary listing MusicXML,
    Lyrics, Bookmarks, and Measure Times with an availability indicator (e.g. Yes /
    No / "N/M parts") and an Edit action linking to the relevant editor.
-6. **Known gap:** a lyrics editor is modeled in the data types and summary but is
+8. **Known gap:** a lyrics editor is modeled in the data types and summary but is
    not yet implemented (its route is commented out); an earlier per-part bookmarks
    editor is parked in a `holding/` directory and is not wired into the app.
 

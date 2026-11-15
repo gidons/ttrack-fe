@@ -47,6 +47,17 @@ highlighted on the notation display.
 the active measure from the stored measure times and drive
 `highlightedMeasureNum`.
 
+### F3. Undo or cancel for measure edits
+
+The measures editor changes the list locally until Save, and there is no way to
+undo a single change (a shift, split, or delete) or to discard all changes while
+staying on the page; leaving the page discards them. Either an undo stack or a
+"Cancel" that restores the last loaded or saved list would cover it.
+
+**Context:** `src/components/timeddata/EditMeasures.tsx`. Every change already
+goes through the pure functions in `measureTimes.ts` and produces a new list, so
+keeping a history of lists is straightforward.
+
 ### F2. Replace the busy song view with a 3-tab layout
 
 The current main song view (`src/components/song/ViewOrEditSong.tsx`) is too
