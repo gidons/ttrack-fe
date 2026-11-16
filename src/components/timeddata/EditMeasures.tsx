@@ -63,6 +63,24 @@ export default function EditMeasures() {
         }
     }, [nextMeasureNum, measureTimes.length])
 
+    // The name of the measure the audio position was last found in. The current measure follows
+    // the position only when the position enters a different measure, so the user's own choices
+    // (clicking in the score, stamping a measure, typing a number) stand until playback or a
+    // seek reaches another measure. The reverse direction is explicit: acting on a measure
+    // seeks the audio, and never happens from this effect, so the two cannot feed each other.
+    const positionMeasureRef = React.useRef<string | undefined>(undefined)
+    React.useEffect(() => {
+        let atPosition: TimedTextEntry | undefined
+        for (const m of measureTimes) {
+            if (m.t <= playPositionMs) { atPosition = m } else { break }
+        }
+        if (!atPosition || atPosition.v === positionMeasureRef.current) { return }
+        positionMeasureRef.current = atPosition.v
+        if (/^\d+$/.test(atPosition.v) && parseInt(atPosition.v, 10) >= 1) {
+            setNextMeasureNum(parseInt(atPosition.v, 10))
+        }
+    }, [playPositionMs])  // deliberately not measureTimes: editing the list must not move the current measure
+
     const sheetZoom = 0.7
     const songClient = backend.song(song.id)
     const hasNotation = !!song?.notationUrl
@@ -121,6 +139,8 @@ export default function EditMeasures() {
         // Use the player's exact position: the reported one only updates a few times a second.
         const positionMs = playerRef.current?.getPositionMs() ?? playPositionMs
         setMeasureTimes(prev => markMeasure(prev, positionMs, `${nextMeasureNum}`))
+        // The position is now inside the measure just stamped; the box moves on to the next one.
+        positionMeasureRef.current = `${nextMeasureNum}`
         setNextMeasureNum(nextMeasureNum + 1)
         setRenamingIndex(null)
     }, [isEditing, playPositionMs, nextMeasureNum, setMeasureTimes, setNextMeasureNum])

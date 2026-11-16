@@ -50,7 +50,7 @@ Branch: `feature/measure-editing`.
     element.
   - [x] 5.3 Render the editor and exercise each row action and the save payload.
   - [x] 5.4 Type-check and build.
-  - [ ] 5.5 Browser walkthrough (manual): pickup measure highlights as measure 1,
+  - [x] 5.5 Browser walkthrough (manual): pickup measure highlights as measure 1,
     shift/split/rename/play behave as specified, and play pauses audibly on the
     downbeat.
 
